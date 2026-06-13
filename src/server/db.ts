@@ -1,11 +1,16 @@
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { env } from "~/env";
-import { PrismaClient } from "../../generated/prisma";
+import { PrismaClient } from "../../generated/prisma/client";
 
-const createPrismaClient = () =>
-	new PrismaClient({
+const createPrismaClient = () => {
+	const adapter = new PrismaMariaDb(env.DATABASE_URL);
+
+	return new PrismaClient({
+		adapter,
 		log:
 			env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
 	});
+};
 
 const globalForPrisma = globalThis as unknown as {
 	prisma: ReturnType<typeof createPrismaClient> | undefined;

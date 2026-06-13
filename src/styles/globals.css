@@ -1,7 +1,348 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@font-face {
+	font-family: Barlow;
+	src: url("/fonts/barlow/Barlow-Thin.ttf") format("truetype");
+	font-style: normal;
+	font-weight: 100;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: Barlow;
+	src: url("/fonts/barlow/Barlow-ExtraLight.ttf") format("truetype");
+	font-style: normal;
+	font-weight: 200;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: Barlow;
+	src: url("/fonts/barlow/Barlow-Light.ttf") format("truetype");
+	font-style: normal;
+	font-weight: 300;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: Barlow;
+	src: url("/fonts/barlow/Barlow-Regular.ttf") format("truetype");
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: Barlow;
+	src: url("/fonts/barlow/Barlow-Medium.ttf") format("truetype");
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: Barlow;
+	src: url("/fonts/barlow/Barlow-SemiBold.ttf") format("truetype");
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: Barlow;
+	src: url("/fonts/barlow/Barlow-Bold.ttf") format("truetype");
+	font-style: normal;
+	font-weight: 700;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: Barlow;
+	src: url("/fonts/barlow/Barlow-ExtraBold.ttf") format("truetype");
+	font-style: normal;
+	font-weight: 800;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: Barlow;
+	src: url("/fonts/barlow/Barlow-Black.ttf") format("truetype");
+	font-style: normal;
+	font-weight: 900;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: Barlow;
+	src: url("/fonts/barlow/Barlow-Italic.ttf") format("truetype");
+	font-style: italic;
+	font-weight: 400;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: Barlow;
+	src: url("/fonts/barlow/Barlow-SemiBoldItalic.ttf") format("truetype");
+	font-style: italic;
+	font-weight: 600;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: Barlow;
+	src: url("/fonts/barlow/Barlow-BoldItalic.ttf") format("truetype");
+	font-style: italic;
+	font-weight: 700;
+	font-display: swap;
+}
 
 @theme {
 	--font-sans:
-		var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
-		"Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+		Barlow, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+		"Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	--font-display: Barlow, var(--font-sans);
+
+	--color-ink: #102016;
+	--color-surface: #fbfbf4;
+	--color-paper: #fffdf8;
+	--color-forest-950: #14291b;
+	--color-forest-900: #294d31;
+	--color-forest-800: #315d3b;
+	--color-forest-700: #3b6e47;
+	--color-forest-600: #4a7b58;
+	--color-forest-500: #67936e;
+	--color-sage-50: #f1f7f3;
+	--color-sage-100: #e1f0e7;
+	--color-sage-200: #c9e2d1;
+	--color-sage-300: #b4d6bf;
+	--color-sage-400: #98c5a7;
+	--color-stone-200: #e6d8c8;
+	--color-stone-500: #b98158;
+	--color-stone-700: #76523a;
+	--color-sky-100: #dcebed;
+
+	--radius-xs: 0.125rem;
+	--radius-sm: 0.25rem;
+	--radius-md: 0.375rem;
+	--radius-lg: 0.5rem;
+	--radius-card: 0.5rem;
+
+	--shadow-soft: 0 1.25rem 3rem rgb(16 32 22 / 12%);
+	--shadow-pressed: inset 0 0 0 1px rgb(255 255 255 / 18%);
+}
+
+@layer base {
+	:root {
+		color-scheme: light;
+		--bb-focus: #b98158;
+		--bb-border: color-mix(in oklab, var(--color-forest-900), white 78%);
+		--bb-muted: color-mix(in oklab, var(--color-ink), white 38%);
+	}
+
+	* {
+		box-sizing: border-box;
+		@apply border-border outline-ring/50;
+	}
+
+	html {
+		min-height: 100%;
+		background: var(--color-surface);
+		font-family: var(--font-sans);
+		@apply font-sans;
+	}
+
+	body {
+		min-height: 100svh;
+		margin: 0;
+		background: linear-gradient(
+			180deg,
+			var(--color-surface),
+			var(--color-sage-50)
+		);
+		color: var(--color-ink);
+		font-family: var(--font-sans);
+		text-rendering: optimizeLegibility;
+		-webkit-font-smoothing: antialiased;
+		@apply text-foreground;
+	}
+
+	::selection {
+		background: var(--color-forest-900);
+		color: white;
+	}
+
+	a {
+		color: inherit;
+		text-decoration-thickness: 0.08em;
+		text-underline-offset: 0.18em;
+	}
+
+	img,
+	svg {
+		display: block;
+		max-width: 100%;
+	}
+
+	button,
+	input,
+	select,
+	textarea {
+		font: inherit;
+	}
+
+	button:not(:disabled),
+	[role="button"]:not(:disabled) {
+		cursor: pointer;
+	}
+}
+
+@layer components {
+	.bb-container {
+		width: min(100% - 2rem, 72rem);
+		margin-inline: auto;
+	}
+
+	.bb-kicker {
+		color: var(--color-forest-700);
+		font-size: 0.875rem;
+		font-weight: 700;
+		letter-spacing: 0;
+		line-height: 1.1;
+		text-transform: uppercase;
+	}
+}
+
+@layer utilities {
+	.text-balance {
+		text-wrap: balance;
+	}
+
+	.bb-muted {
+		color: var(--bb-muted);
+	}
+
+	.bb-focus-ring {
+		outline: 2px solid transparent;
+		outline-offset: 3px;
+	}
+
+	.bb-focus-ring:focus-visible {
+		outline-color: var(--bb-focus);
+	}
+}
+
+@theme inline {
+	--font-heading: Barlow, ui-sans-serif, system-ui, sans-serif;
+	--font-sans: Barlow, ui-sans-serif, system-ui, sans-serif;
+	--color-sidebar-ring: var(--sidebar-ring);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar: var(--sidebar);
+	--color-chart-5: var(--chart-5);
+	--color-chart-4: var(--chart-4);
+	--color-chart-3: var(--chart-3);
+	--color-chart-2: var(--chart-2);
+	--color-chart-1: var(--chart-1);
+	--color-ring: var(--ring);
+	--color-input: var(--input);
+	--color-border: var(--border);
+	--color-destructive: var(--destructive);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-accent: var(--accent);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-muted: var(--muted);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-secondary: var(--secondary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-primary: var(--primary);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-popover: var(--popover);
+	--color-card-foreground: var(--card-foreground);
+	--color-card: var(--card);
+	--color-foreground: var(--foreground);
+	--color-background: var(--background);
+	--radius-sm: calc(var(--radius) * 0.6);
+	--radius-md: calc(var(--radius) * 0.8);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) * 1.4);
+	--radius-2xl: calc(var(--radius) * 1.8);
+	--radius-3xl: calc(var(--radius) * 2.2);
+	--radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+	--background: #fbfbf4;
+	--foreground: #102016;
+	--card: #fffdf8;
+	--card-foreground: #102016;
+	--popover: #fffdf8;
+	--popover-foreground: #102016;
+	--primary: #294d31;
+	--primary-foreground: #fffdf8;
+	--secondary: #e1f0e7;
+	--secondary-foreground: #14291b;
+	--muted: #f1f7f3;
+	--muted-foreground: color-mix(in oklab, #102016, white 38%);
+	--accent: #e1f0e7;
+	--accent-foreground: #14291b;
+	--destructive: #b42318;
+	--border: color-mix(in oklab, #294d31, white 78%);
+	--input: color-mix(in oklab, #294d31, white 78%);
+	--ring: #b98158;
+	--chart-1: #294d31;
+	--chart-2: #67936e;
+	--chart-3: #b98158;
+	--chart-4: #dcebed;
+	--chart-5: #76523a;
+	--radius: 0.5rem;
+	--sidebar: #fffdf8;
+	--sidebar-foreground: #102016;
+	--sidebar-primary: #294d31;
+	--sidebar-primary-foreground: #fffdf8;
+	--sidebar-accent: #e1f0e7;
+	--sidebar-accent-foreground: #14291b;
+	--sidebar-border: color-mix(in oklab, #294d31, white 78%);
+	--sidebar-ring: #b98158;
+}
+
+.dark {
+	--background: #102016;
+	--foreground: #f1f7f3;
+	--card: #14291b;
+	--card-foreground: #f1f7f3;
+	--popover: #14291b;
+	--popover-foreground: #f1f7f3;
+	--primary: #e1f0e7;
+	--primary-foreground: #14291b;
+	--secondary: #294d31;
+	--secondary-foreground: #f1f7f3;
+	--muted: #294d31;
+	--muted-foreground: #c9e2d1;
+	--accent: #315d3b;
+	--accent-foreground: #f1f7f3;
+	--destructive: #ffb4ab;
+	--border: rgb(255 255 255 / 10%);
+	--input: rgb(255 255 255 / 15%);
+	--ring: #b98158;
+	--chart-1: #e1f0e7;
+	--chart-2: #98c5a7;
+	--chart-3: #b98158;
+	--chart-4: #dcebed;
+	--chart-5: #e6d8c8;
+	--sidebar: #14291b;
+	--sidebar-foreground: #f1f7f3;
+	--sidebar-primary: #e1f0e7;
+	--sidebar-primary-foreground: #14291b;
+	--sidebar-accent: #294d31;
+	--sidebar-accent-foreground: #f1f7f3;
+	--sidebar-border: rgb(255 255 255 / 10%);
+	--sidebar-ring: #b98158;
 }

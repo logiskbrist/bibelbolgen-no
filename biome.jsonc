@@ -7,14 +7,14 @@
 		"clientKind": "git"
 	},
 	"files": {
-		"includes": ["**", "!generated"]
+		"includes": ["**", "!generated", "!public/brand", "!public/fonts"]
 	},
 	"assist": {
 		"enabled": true,
 		"actions": {
-			"preset": "recommended",
+			"recommended": true,
 			"source": {
-				"preset": "recommended",
+				"recommended": true,
 				"organizeImports": "on",
 				"useSortedAttributes": "on"
 			}
@@ -26,7 +26,7 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"preset": "recommended",
+			"recommended": true,
 			"nursery": {
 				"useSortedClasses": {
 					"level": "warn",
