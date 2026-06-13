@@ -2,20 +2,274 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-    provider = "prisma-client-js"
-    output   = "../generated/prisma"
+  provider = "prisma-client"
+  output   = "../generated/prisma"
 }
 
 datasource db {
-    provider = "mysql"
-    url      = env("DATABASE_URL")
+  provider = "mysql"
 }
 
-model Post {
-    id        Int      @id @default(autoincrement())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+enum SystemRole {
+  USER
+  GLOBAL_ADMIN
+}
 
-    @@index([name])
+enum GroupVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum GroupStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum GroupAdminRole {
+  OWNER
+  ADMIN
+}
+
+enum MembershipStatus {
+  ACTIVE
+  LEFT
+  REMOVED
+}
+
+enum MembershipJoinSource {
+  PUBLIC_SIGNUP
+  INVITE_TOKEN
+  ADMIN_ADDED
+}
+
+enum ReadingDayKind {
+  READING
+  REST
+}
+
+enum ProgressEventType {
+  SET_DAY
+  PAUSE_START
+  PAUSE_END
+}
+
+enum CheckInStatus {
+  ON_TRACK
+  BEHIND
+  AHEAD
+  PAUSED
+}
+
+enum OtpPurpose {
+  LOGIN
+  REGISTER
+}
+
+model User {
+  id              String     @id @default(cuid())
+  phoneNumber     String     @unique @db.VarChar(32)
+  phoneVerifiedAt DateTime?
+  name            String     @db.VarChar(160)
+  email           String     @db.VarChar(320)
+  systemRole      SystemRole @default(USER)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  sessions              AuthSession[]
+  otpCodes              PhoneOtpCode[]
+  memberships           GroupMembership[]
+  checkIns              MemberCheckIn[]
+  createdGroups         Group[]              @relation("CreatedGroups")
+  adminAssignments      GroupAdmin[]         @relation("GroupAdminUser")
+  adminAssignmentsMade  GroupAdmin[]         @relation("GroupAdminCreatedBy")
+  progressEventsCreated GroupProgressEvent[] @relation("ProgressEventCreatedBy")
+
+  @@index([email])
+}
+
+model AuthSession {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique @db.VarChar(255)
+  expiresAt  DateTime
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model PhoneOtpCode {
+  id          String     @id @default(cuid())
+  userId      String?
+  phoneNumber String     @db.VarChar(32)
+  codeHash    String     @db.VarChar(255)
+  purpose     OtpPurpose
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  attempts    Int        @default(0)
+  createdAt   DateTime   @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([phoneNumber, purpose, expiresAt])
+}
+
+model ReadingPlan {
+  id        String   @id @default(cuid())
+  slug      String   @unique @db.VarChar(80)
+  title     String   @db.VarChar(160)
+  totalDays Int      @default(150)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sections ReadingPlanSection[]
+  days     ReadingPlanDay[]
+  groups   Group[]
+}
+
+model ReadingPlanSection {
+  id             String  @id @default(cuid())
+  planId         String
+  sortOrder      Int
+  name           String  @db.VarChar(120)
+  subtitle       String? @db.VarChar(255)
+  startDayNumber Int
+  endDayNumber   Int
+
+  plan ReadingPlan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  days ReadingPlanDay[]
+
+  @@unique([planId, sortOrder])
+  @@index([planId, startDayNumber, endDayNumber])
+}
+
+model ReadingPlanDay {
+  id            String         @id @default(cuid())
+  planId        String
+  sectionId     String?
+  dayNumber     Int
+  kind          ReadingDayKind @default(READING)
+  title         String?        @db.VarChar(160)
+  readingText   String?        @db.VarChar(255)
+  introIncluded Boolean        @default(false)
+
+  plan             ReadingPlan         @relation(fields: [planId], references: [id], onDelete: Cascade)
+  section          ReadingPlanSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  reportedCheckIns MemberCheckIn[]
+
+  @@unique([planId, dayNumber])
+  @@index([sectionId])
+}
+
+model Group {
+  id                    String          @id @default(cuid())
+  readingPlanId         String
+  createdByUserId       String?
+  name                  String          @db.VarChar(160)
+  slug                  String          @unique @db.VarChar(120)
+  description           String?         @db.Text
+  city                  String?         @db.VarChar(120)
+  visibility            GroupVisibility @default(PUBLIC)
+  status                GroupStatus     @default(ACTIVE)
+  startsOn              DateTime        @db.Date
+  timeZone              String          @default("Europe/Oslo") @db.VarChar(80)
+  privateInviteCodeHash String?         @unique @db.VarChar(255)
+  inviteCodeRotatedAt   DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  readingPlan    ReadingPlan          @relation(fields: [readingPlanId], references: [id])
+  createdBy      User?                @relation("CreatedGroups", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  memberships    GroupMembership[]
+  admins         GroupAdmin[]
+  progressEvents GroupProgressEvent[]
+  checkIns       MemberCheckIn[]
+
+  @@index([visibility, status])
+  @@index([readingPlanId])
+}
+
+model GroupAdmin {
+  id              String         @id @default(cuid())
+  groupId         String
+  userId          String
+  role            GroupAdminRole @default(ADMIN)
+  createdByUserId String?
+  createdAt       DateTime       @default(now())
+
+  group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User  @relation("GroupAdminUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("GroupAdminCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}
+
+model GroupMembership {
+  id         String               @id @default(cuid())
+  groupId    String
+  userId     String
+  status     MembershipStatus     @default(ACTIVE)
+  joinSource MembershipJoinSource
+  joinedAt   DateTime             @default(now())
+  leftAt     DateTime?
+
+  smsOptIn        Boolean   @default(false)
+  smsOptInAt      DateTime?
+  smsOptedOutAt   DateTime?
+  emailOptIn      Boolean   @default(false)
+  emailOptInAt    DateTime?
+  emailOptedOutAt DateTime?
+
+  group    Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkIns MemberCheckIn[]
+
+  @@unique([groupId, userId])
+  @@index([userId, status])
+  @@index([groupId, status])
+}
+
+model GroupProgressEvent {
+  id              String            @id @default(cuid())
+  groupId         String
+  createdByUserId String?
+  type            ProgressEventType
+  effectiveOn     DateTime          @db.Date
+  dayNumber       Int?
+  note            String?           @db.Text
+  createdAt       DateTime          @default(now())
+
+  group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("ProgressEventCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([groupId, effectiveOn])
+}
+
+model MemberCheckIn {
+  id                String        @id @default(cuid())
+  membershipId      String
+  groupId           String
+  userId            String
+  reportedPlanDayId String?
+  status            CheckInStatus
+  reportedDayNumber Int?
+  groupDaySnapshot  Int?
+  note              String?       @db.Text
+  checkedInAt       DateTime      @default(now())
+  forDate           DateTime?     @db.Date
+
+  membership      GroupMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  group           Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reportedPlanDay ReadingPlanDay? @relation(fields: [reportedPlanDayId], references: [id], onDelete: SetNull)
+
+  @@index([membershipId, checkedInAt])
+  @@index([groupId, checkedInAt])
+  @@index([groupId, status, checkedInAt])
 }
