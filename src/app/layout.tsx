@@ -7,22 +7,22 @@ import { cn } from "~/lib/utils";
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-	title: "Bibelbølgen",
-	description: "Hjelp meg å lese Bibelen på fem måneder.",
-	icons: [{ rel: "icon", url: "/favicon.ico" }],
+  title: "Bibelbølgen",
+  description: "Hjelp meg å lese Bibelen på fem måneder.",
+  icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
 export const viewport: Viewport = {
-	colorScheme: "light",
-	themeColor: "#294d31",
+  colorScheme: "light",
+  themeColor: "#294d31",
 };
 
 export default function RootLayout({
-	children,
+  children,
 }: Readonly<{ children: React.ReactNode }>) {
-	return (
-		<html className={cn("font-sans", geist.variable)} lang="nb">
-			<body>{children}</body>
-		</html>
-	);
+  return (
+    <html className={cn("font-sans", geist.variable)} lang="nb">
+      <body>{children}</body>
+    </html>
+  );
 }
