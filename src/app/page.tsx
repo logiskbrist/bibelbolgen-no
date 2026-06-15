@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import { BibleTimeline } from "~/components/bible-timeline";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent } from "~/components/ui/card";
 
 export const metadata = {
   title: "Forside · Bibelbølgen",
@@ -15,29 +15,15 @@ const readingMarkers = [
 
 export default function ForsidePage() {
   return (
-    <main className="min-h-screen overflow-hidden bg-surface text-ink">
-      <section className="relative flex min-h-[88svh] flex-col overflow-hidden bg-sage-100">
-        <div className="absolute inset-0">
-          <Image
-            alt="Boken Hjelp meg å lese Bibelen holdt foran en lys bakgrunn"
-            className="h-full w-full object-cover object-[64%_center] opacity-45"
-            fill
-            priority
-            sizes="100vw"
-            src="/brand/book-hand.png"
-          />
-          <div className="absolute inset-0 bg-paper/80" />
-        </div>
-
+    <main className="bb-concept-bg min-h-screen overflow-hidden text-ink">
+      <section className="relative flex min-h-screen flex-col overflow-hidden">
         <header className="bb-container relative z-10 flex items-center justify-between gap-6 py-6">
-          <Image
-            alt="Hjelp meg å lese Bibelen"
-            className="h-14 w-auto"
-            height={82}
-            priority
-            src="/brand/hjelp-meg-lese-bibelen-wordmark.svg"
-            width={267}
-          />
+          <Link
+            className="font-bold text-forest-700 text-lg sm:text-xl"
+            href="/"
+          >
+            Bibelbølgen
+          </Link>
           <nav className="flex items-center gap-1 text-sm">
             <Button
               asChild
@@ -69,17 +55,23 @@ export default function ForsidePage() {
           </nav>
         </header>
 
-        <div className="bb-container relative z-10 flex flex-1 items-center py-12">
-          <div className="max-w-2xl py-8">
-            <p className="bb-kicker">Bibelbølgen</p>
-            <h1 className="mt-5 max-w-2xl text-balance font-black font-display text-5xl text-forest-900 leading-[0.92] sm:text-7xl lg:text-8xl">
-              Hjelp meg å lese Bibelen
+        <div className="bb-container relative z-10 flex flex-1 flex-col items-center justify-center py-12 text-center">
+          <div className="mx-auto max-w-4xl py-8">
+            <h1 className="mx-auto max-w-4xl">
+              <span className="sr-only">Hjelp meg å lese Bibelen</span>
+              <Image
+                alt=""
+                className="mx-auto h-auto w-full max-w-[60rem]"
+                height={82}
+                priority
+                src="/brand/hjelp-meg-lese-bibelen-wordmark.svg"
+                width={267}
+              />
             </h1>
-            <p className="mt-6 max-w-xl font-medium text-forest-950/80 text-xl leading-8 sm:text-2xl">
-              En konkret leseplan for Det nye testamentet, laget for jevn rytme,
-              tydelig progresjon og fem måneder med retning.
+            <p className="mx-auto mt-3 max-w-xl font-display font-medium text-forest-950/70 text-sm uppercase leading-tight sm:text-base">
+              Det nye testamentet på fem måneder
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Button asChild className="min-h-11">
                 <a href="/brand/hjelp-meg-lese-bibelen.pdf">
                   Last ned leseplanen
@@ -90,6 +82,8 @@ export default function ForsidePage() {
               </Button>
             </div>
           </div>
+
+          <BibleTimeline className="mt-2 w-full pb-10" />
         </div>
       </section>
 
@@ -111,26 +105,34 @@ export default function ForsidePage() {
 
           <div className="grid gap-4 sm:grid-cols-3">
             {readingMarkers.map((marker) => (
-              <Card
-                className="border-white/15 bg-white/8 py-0 text-white shadow-pressed"
+              <div
+                className="border border-white/15 bg-white/8 p-5 shadow-pressed"
                 key={marker.label}
               >
-                <CardContent className="p-5">
-                  <p className="font-black text-3xl text-sage-200 leading-none">
-                    {marker.value}
-                  </p>
-                  <p className="mt-3 font-semibold text-sm text-white/72">
-                    {marker.label}
-                  </p>
-                </CardContent>
-              </Card>
+                <p className="font-black text-3xl text-sage-200 leading-none">
+                  {marker.value}
+                </p>
+                <p className="mt-3 font-semibold text-sm text-white/72">
+                  {marker.label}
+                </p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="bg-surface py-16">
-        <div className="bb-container grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+      <section className="relative overflow-hidden bg-surface py-20">
+        <Image
+          alt=""
+          aria-hidden="true"
+          className="absolute right-1/2 bottom-0 z-0 w-[min(1500px,150vw)] translate-x-1/2 object-contain opacity-18 mix-blend-multiply"
+          height={1152}
+          src="/brand/rome-colosseum.png"
+          width={2400}
+        />
+        <div className="absolute inset-0 z-0 bg-gradient-to-b from-surface via-surface/88 to-sage-50/92" />
+
+        <div className="bb-container relative z-10 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div className="order-2 lg:order-1">
             <Image
               alt="To eksemplarer av Hjelp meg å lese Bibelen"
