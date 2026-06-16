@@ -50,6 +50,10 @@ export async function startGroupAction(
         : null;
 
     await createAuthSession({
+      kind: SessionKind.ADMIN,
+      userId: user.id,
+    });
+    await createAuthSession({
       kind: SessionKind.MEMBER_DEVICE,
       userId: user.id,
     });
