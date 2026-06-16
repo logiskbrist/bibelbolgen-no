@@ -1,7 +1,11 @@
 "use client";
 
 import { CheckCircle2, Send } from "lucide-react";
-import { useState } from "react";
+import { useActionState, useState } from "react";
+import {
+  type AdminGroupActionState,
+  sendAdminGroupMessageAction,
+} from "~/app/admin/grupper/actions";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import {
@@ -17,16 +21,31 @@ import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
 
 export function MessageComposer({
-  recipientCount,
+  emailRecipientCount,
+  groupId,
+  groupSlug,
+  smsRecipientCount,
 }: {
-  recipientCount: number;
+  emailRecipientCount: number;
+  groupId: string;
+  groupSlug: string;
+  smsRecipientCount: number;
 }) {
-  const [channel, setChannel] = useState<"sms" | "email">("sms");
+  const [state, formAction, isPending] = useActionState<
+    AdminGroupActionState,
+    FormData
+  >(sendAdminGroupMessageAction, {});
+  const [channel, setChannel] = useState<"SMS" | "EMAIL">("SMS");
   const [body, setBody] = useState("");
   const [subject, setSubject] = useState("");
-  const [sent, setSent] = useState(false);
 
   const maxSms = 160;
+  const recipientCount =
+    channel === "SMS" ? smsRecipientCount : emailRecipientCount;
+  const canSend =
+    body.trim().length > 0 &&
+    recipientCount > 0 &&
+    (channel === "SMS" || subject.trim().length > 0);
 
   return (
     <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
@@ -39,87 +58,99 @@ export function MessageComposer({
         </CardDescription>
       </CardHeader>
       <CardContent className="p-6">
-        <Tabs
-          className="gap-0"
-          onValueChange={(value) => {
-            setChannel(value as "sms" | "email");
-            setSent(false);
-          }}
-          value={channel}
-        >
-          <TabsList className="bg-surface">
-            <TabsTrigger value="sms">SMS</TabsTrigger>
-            <TabsTrigger value="email">E-post</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <form action={formAction}>
+          <input name="channel" type="hidden" value={channel} />
+          <input name="groupId" type="hidden" value={groupId} />
+          <input name="groupSlug" type="hidden" value={groupSlug} />
 
-        {channel === "email" && (
+          <Tabs
+            className="gap-0"
+            onValueChange={(value) => {
+              setChannel(value as "SMS" | "EMAIL");
+            }}
+            value={channel}
+          >
+            <TabsList className="bg-surface">
+              <TabsTrigger value="SMS">SMS</TabsTrigger>
+              <TabsTrigger value="EMAIL">E-post</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {channel === "EMAIL" && (
+            <div className="mt-4">
+              <Label className="text-forest-950/80" htmlFor="message-subject">
+                Emne
+              </Label>
+              <Input
+                className="mt-1.5 min-h-11 bg-surface font-medium"
+                id="message-subject"
+                name="subject"
+                onChange={(event) => {
+                  setSubject(event.target.value);
+                }}
+                placeholder="Ukens lesing"
+                type="text"
+                value={subject}
+              />
+            </div>
+          )}
+
           <div className="mt-4">
-            <Label className="text-forest-950/80" htmlFor="message-subject">
-              Emne
+            <Label className="text-forest-950/80" htmlFor="message-body">
+              Melding
             </Label>
-            <Input
-              className="mt-1.5 min-h-11 bg-surface font-medium"
-              id="message-subject"
+            <Textarea
+              className="mt-1.5 min-h-32 resize-y bg-surface font-medium"
+              id="message-body"
+              maxLength={channel === "SMS" ? maxSms : undefined}
+              name="body"
               onChange={(event) => {
-                setSubject(event.target.value);
-                setSent(false);
+                setBody(event.target.value);
               }}
-              placeholder="Ukens lesing"
-              type="text"
-              value={subject}
+              placeholder={
+                channel === "SMS"
+                  ? "Husk samling i kveld kl 19 ..."
+                  : "Hei alle sammen! Her er refleksjonsspørsmålene ..."
+              }
+              value={body}
             />
           </div>
-        )}
 
-        <div className="mt-4">
-          <Label className="text-forest-950/80" htmlFor="message-body">
-            Melding
-          </Label>
-          <Textarea
-            className="mt-1.5 min-h-32 resize-y bg-surface font-medium"
-            id="message-body"
-            maxLength={channel === "sms" ? maxSms : undefined}
-            onChange={(event) => {
-              setBody(event.target.value);
-              setSent(false);
-            }}
-            placeholder={
-              channel === "sms"
-                ? "Husk samling i kveld kl 19 ..."
-                : "Hei alle sammen! Her er refleksjonsspørsmålene ..."
-            }
-            value={body}
-          />
-        </div>
+          <div className="mt-2 flex items-center justify-between text-ink/50 text-xs">
+            <span>
+              {channel === "SMS"
+                ? `${body.length}/${maxSms} tegn`
+                : `${body.length} tegn`}
+            </span>
+            <span>Sendes til {recipientCount} deltakere</span>
+          </div>
 
-        <div className="mt-2 flex items-center justify-between text-ink/50 text-xs">
-          <span>
-            {channel === "sms"
-              ? `${body.length}/${maxSms} tegn`
-              : `${body.length} tegn`}
-          </span>
-          <span>Sendes til {recipientCount} deltakere</span>
-        </div>
+          {state.message && (
+            <Alert
+              className={
+                state.ok
+                  ? "mt-4 border-forest-500/30 bg-sage-100 text-forest-900"
+                  : "mt-4 border-stone-500/40 bg-stone-100 text-stone-800"
+              }
+            >
+              {state.ok && <CheckCircle2 />}
+              <AlertDescription className="font-semibold text-current">
+                {state.message}
+              </AlertDescription>
+            </Alert>
+          )}
 
-        {sent ? (
-          <Alert className="mt-4 border-forest-500/30 bg-sage-100 text-forest-900">
-            <CheckCircle2 />
-            <AlertDescription className="font-semibold text-forest-900">
-              Meldingen er lagt i kø og sendes til {recipientCount} deltakere.
-            </AlertDescription>
-          </Alert>
-        ) : (
           <Button
             className="mt-4 min-h-11 w-full"
-            disabled={!body.trim()}
-            onClick={() => setSent(true)}
-            type="button"
+            disabled={!canSend || isPending}
+            type="submit"
           >
             <Send />
-            Send {channel === "sms" ? "SMS" : "e-post"}
+            {isPending
+              ? "Sender ..."
+              : `Send ${channel === "SMS" ? "SMS" : "e-post"}`}
           </Button>
-        )}
+        </form>
       </CardContent>
     </Card>
   );

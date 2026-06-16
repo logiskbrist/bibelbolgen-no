@@ -1,19 +1,35 @@
 import { CheckCircle2 } from "lucide-react";
+import { joinPublicGroupAction } from "~/app/bli-med/actions";
 import { RegisterForm } from "~/components/register-form";
 import { SiteHeader } from "~/components/site-header";
 import { Badge } from "~/components/ui/badge";
-import { groups } from "~/lib/mock-data";
+import { listPublicGroups } from "~/server/groups/queries";
 
 export const metadata = {
-  title: "Bli med · Bibelbølgen",
+  title: "Bli med i gruppe · Bibelbølgen",
 };
 
-export default function BliMedPage() {
+export const dynamic = "force-dynamic";
+
+export default async function BliMedIGruppePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ group?: string }>;
+}) {
+  const [{ group: requestedGroup }, groups] = await Promise.all([
+    searchParams,
+    listPublicGroups(),
+  ]);
   const groupOptions = groups.map((group) => ({
     slug: group.slug,
     name: group.name,
-    city: group.city,
+    city: group.city ?? "Digital gruppe",
   }));
+  const defaultGroup = groupOptions.some(
+    (group) => group.slug === requestedGroup,
+  )
+    ? requestedGroup
+    : undefined;
 
   return (
     <div className="min-h-screen bg-surface text-ink">
@@ -49,7 +65,11 @@ export default function BliMedPage() {
             </ul>
           </div>
 
-          <RegisterForm groupOptions={groupOptions} />
+          <RegisterForm
+            action={joinPublicGroupAction}
+            defaultGroup={defaultGroup}
+            groupOptions={groupOptions}
+          />
         </div>
       </main>
     </div>

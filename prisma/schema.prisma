@@ -67,6 +67,16 @@ enum OtpPurpose {
   REGISTER
 }
 
+enum SessionKind {
+  MEMBER_DEVICE
+  ADMIN
+}
+
+enum MessageChannel {
+  SMS
+  EMAIL
+}
+
 model User {
   id              String     @id @default(cuid())
   phoneNumber     String     @unique @db.VarChar(32)
@@ -85,21 +95,25 @@ model User {
   adminAssignments      GroupAdmin[]         @relation("GroupAdminUser")
   adminAssignmentsMade  GroupAdmin[]         @relation("GroupAdminCreatedBy")
   progressEventsCreated GroupProgressEvent[] @relation("ProgressEventCreatedBy")
+  invitesCreated        GroupInvite[]        @relation("GroupInviteCreatedBy")
+  messageDispatchesSent MessageDispatch[]    @relation("MessageDispatchSentBy")
 
   @@index([email])
 }
 
 model AuthSession {
-  id         String    @id @default(cuid())
+  id         String      @id @default(cuid())
   userId     String
-  tokenHash  String    @unique @db.VarChar(255)
+  kind       SessionKind @default(MEMBER_DEVICE)
+  tokenHash  String      @unique @db.VarChar(255)
   expiresAt  DateTime
   lastUsedAt DateTime?
-  createdAt  DateTime  @default(now())
+  revokedAt  DateTime?
+  createdAt  DateTime    @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, expiresAt])
+  @@index([userId, kind, expiresAt])
 }
 
 model PhoneOtpCode {
@@ -183,12 +197,14 @@ model Group {
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
 
-  readingPlan    ReadingPlan          @relation(fields: [readingPlanId], references: [id])
-  createdBy      User?                @relation("CreatedGroups", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  memberships    GroupMembership[]
-  admins         GroupAdmin[]
-  progressEvents GroupProgressEvent[]
-  checkIns       MemberCheckIn[]
+  readingPlan       ReadingPlan          @relation(fields: [readingPlanId], references: [id])
+  createdBy         User?                @relation("CreatedGroups", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  memberships       GroupMembership[]
+  admins            GroupAdmin[]
+  progressEvents    GroupProgressEvent[]
+  checkIns          MemberCheckIn[]
+  invites           GroupInvite[]
+  messageDispatches MessageDispatch[]
 
   @@index([visibility, status])
   @@index([readingPlanId])
@@ -272,4 +288,39 @@ model MemberCheckIn {
   @@index([membershipId, checkedInAt])
   @@index([groupId, checkedInAt])
   @@index([groupId, status, checkedInAt])
+}
+
+model GroupInvite {
+  id              String    @id @default(cuid())
+  groupId         String
+  tokenHash       String    @unique @db.VarChar(255)
+  codeHash        String?   @unique @db.VarChar(255)
+  expiresAt       DateTime?
+  maxUses         Int?
+  usedCount       Int       @default(0)
+  createdByUserId String?
+  revokedAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("GroupInviteCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([groupId, createdAt])
+  @@index([expiresAt])
+}
+
+model MessageDispatch {
+  id              String         @id @default(cuid())
+  groupId         String
+  sentByUserId    String?
+  channel         MessageChannel
+  recipientCount  Int
+  providerBatchId String?        @db.VarChar(255)
+  sentAt          DateTime       @default(now())
+
+  group  Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sentBy User? @relation("MessageDispatchSentBy", fields: [sentByUserId], references: [id], onDelete: SetNull)
+
+  @@index([groupId, sentAt])
+  @@index([sentByUserId, sentAt])
 }

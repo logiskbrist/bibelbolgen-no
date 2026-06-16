@@ -2,35 +2,48 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FeedbackWidget } from "~/components/feedback-widget";
 import { SiteHeader } from "~/components/site-header";
-import { Avatar, ProgressBar, StatusBadge } from "~/components/ui";
+import { ProgressBar, StatusBadge } from "~/components/ui";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import {
-  getGroup,
-  groupSummary,
-  groups,
-  PLAN_MILESTONES,
-  PLAN_TOTAL_DAYS,
-  statusFor,
-} from "~/lib/mock-data";
+import { getCurrentUser } from "~/server/auth/permissions";
+import { getGroupBySlugForViewer } from "~/server/groups/queries";
+import { MembershipStatus } from "../../../../generated/prisma/client";
 
-export function generateStaticParams() {
-  return groups.map((group) => ({ slug: group.slug }));
+export const dynamic = "force-dynamic";
+
+function dayLabel(dayNumber: number, totalDays: number) {
+  if (dayNumber <= 0) {
+    return "Ikke startet";
+  }
+
+  return `Dag ${dayNumber} av ${totalDays}`;
 }
 
-export default async function GruppePage({
+export default async function GruppesidePage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const group = getGroup(slug);
+  const viewer = await getCurrentUser();
+  const group = await getGroupBySlugForViewer(slug, viewer?.id);
+
   if (!group) {
     notFound();
   }
 
-  const s = groupSummary(group);
+  const currentDay = group.progress.currentDay;
+  const totalDays = group.progress.totalDays;
+  const currentReading = group.readingPlan.days.find(
+    (day) => day.dayNumber === currentDay,
+  );
+  const currentSection = group.readingPlan.sections.find(
+    (section) =>
+      section.startDayNumber <= currentDay &&
+      section.endDayNumber >= currentDay,
+  );
+  const isMember = group.viewerMembershipStatus === MembershipStatus.ACTIVE;
 
   return (
     <div className="min-h-screen bg-surface text-ink">
@@ -48,71 +61,67 @@ export default async function GruppePage({
 
         <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="bb-kicker">{group.city}</p>
+            <p className="bb-kicker">
+              {group.city ?? "Digital gruppe"} · {group.visibility}
+            </p>
             <h1 className="mt-2 font-black font-display text-4xl text-forest-900 leading-[0.95] sm:text-5xl">
               {group.name}
             </h1>
-            <p className="bb-muted mt-3 max-w-xl font-medium text-lg leading-7">
-              {group.description}
-            </p>
+            {group.description && (
+              <p className="bb-muted mt-3 max-w-xl font-medium text-lg leading-7">
+                {group.description}
+              </p>
+            )}
           </div>
-          <StatusBadge status={s.status} />
+          <StatusBadge status={currentDay > 0 ? "on-track" : "not-started"} />
         </div>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-start">
           <div className="space-y-8">
             <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
               <CardContent className="p-6">
-                <div className="flex items-end justify-between">
+                <div className="flex items-end justify-between gap-6">
                   <div>
                     <p className="bb-kicker">Gruppas fremdrift</p>
                     <p className="mt-2 font-black font-display text-3xl text-forest-900">
-                      Dag {group.currentDay}{" "}
-                      <span className="font-semibold text-forest-700 text-lg">
-                        av {PLAN_TOTAL_DAYS}
-                      </span>
+                      {dayLabel(currentDay, totalDays)}
                     </p>
                     <p className="mt-1 font-semibold text-forest-700">
-                      Nå i {s.currentLabel}
+                      {currentSection?.name ?? group.readingPlan.title}
                     </p>
                   </div>
                   <p className="font-black text-5xl text-forest-900 leading-none">
-                    {s.percent}%
+                    {group.progress.percent}%
                   </p>
                 </div>
 
                 <div className="mt-5">
-                  <ProgressBar expected={s.expected} value={s.percent} />
+                  <ProgressBar value={group.progress.percent} />
                   <div className="mt-2 flex justify-between text-ink/50 text-xs">
                     <span>Start</span>
-                    <span className="font-semibold text-stone-700">
-                      | Forventet i dag (dag {s.expected})
-                    </span>
                     <span>Fullført</span>
                   </div>
                 </div>
 
                 <ol className="mt-6 flex flex-wrap gap-2">
-                  {PLAN_MILESTONES.filter((m) => m.day < PLAN_TOTAL_DAYS).map(
-                    (milestone) => {
-                      const reached = group.currentDay >= milestone.day;
+                  {group.readingPlan.sections.map((section) => {
+                    const reached = currentDay >= section.startDayNumber;
 
-                      return (
-                        <li key={milestone.label}>
-                          <Badge
-                            className={
-                              reached
-                                ? "border-forest-500/30 bg-sage-100 text-forest-900"
-                                : "border-ink/10 bg-surface text-ink/40"
-                            }
-                            variant="outline"
-                          >
-                            {milestone.label}
-                          </Badge>
-                        </li>
-                      );
-                    },
-                  )}
+                    return (
+                      <li key={section.id}>
+                        <Badge
+                          className={
+                            reached
+                              ? "border-forest-500/30 bg-sage-100 text-forest-900"
+                              : "border-ink/10 bg-surface text-ink/40"
+                          }
+                          variant="outline"
+                        >
+                          {section.name}
+                        </Badge>
+                      </li>
+                    );
+                  })}
                 </ol>
               </CardContent>
             </Card>
@@ -120,59 +129,68 @@ export default async function GruppePage({
             <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
               <CardHeader className="p-6 pb-0">
                 <CardTitle className="font-black font-display text-forest-900 text-xl">
-                  Deltakere ({s.memberCount})
+                  Dagens lesing
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 pt-4">
-                <ul className="divide-y divide-forest-900/10">
-                  {group.members.map((member) => {
-                    const memberStatus = statusFor(
-                      member.currentDay,
-                      s.expected,
-                    );
-
-                    return (
-                      <li
-                        className="flex items-center gap-3 py-3"
-                        key={member.id}
-                      >
-                        <Avatar name={member.name} />
-                        <div className="min-w-0 flex-1">
-                          <p className="font-bold text-forest-950">
-                            {member.name}
-                            {member.role === "local-admin" && (
-                              <Badge className="ml-2 bg-forest-900 font-bold text-[0.6rem] text-white uppercase">
-                                Leder
-                              </Badge>
-                            )}
-                          </p>
-                          <p className="text-ink/50 text-xs">
-                            Dag {member.currentDay}
-                          </p>
-                        </div>
-                        <StatusBadge status={memberStatus} />
-                      </li>
-                    );
-                  })}
-                </ul>
+                {currentReading ? (
+                  <>
+                    <p className="font-black font-display text-2xl text-forest-900">
+                      {currentReading.title ?? currentSection?.name}
+                    </p>
+                    <p className="mt-2 font-semibold text-forest-700">
+                      {currentReading.readingText}
+                    </p>
+                    {currentReading.introIncluded && (
+                      <Badge className="mt-4 bg-sage-100 text-forest-900">
+                        Inkluderer introduksjon
+                      </Badge>
+                    )}
+                  </>
+                ) : (
+                  <p className="bb-muted text-sm leading-6">
+                    Gruppa har ikke startet leseplanen ennå.
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>
 
           <div className="space-y-6 lg:sticky lg:top-6">
-            <FeedbackWidget suggestedDay={s.expected} />
+            {isMember ? (
+              <FeedbackWidget
+                groupId={group.id}
+                groupSlug={group.slug}
+                suggestedDay={Math.max(1, currentDay)}
+              />
+            ) : (
+              <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+                <CardContent className="p-6">
+                  <h3 className="font-black font-display text-forest-900 text-xl">
+                    Bli med i gruppa
+                  </h3>
+                  <p className="bb-muted mt-2 text-sm leading-6">
+                    Meld deg på for å lagre denne gruppa på enheten din og sende
+                    inn hvilken dag du selv er på.
+                  </p>
+                  <Button asChild className="mt-5 w-full">
+                    <Link href={`/bli-med?group=${group.slug}`}>Bli med</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
               <CardContent className="p-6">
                 <h3 className="font-black font-display text-forest-900 text-lg">
-                  Samlinger
+                  Deltakere
                 </h3>
-                <p className="mt-2 font-semibold text-forest-700">
-                  {group.meetingRhythm}
+                <p className="mt-2 font-black text-4xl text-forest-900">
+                  {group._count.memberships}
                 </p>
-                <p className="bb-muted mt-3 text-sm leading-6">
-                  Lederen din sender ut påminnelser og refleksjonsspørsmål før
-                  hver samling.
+                <p className="bb-muted mt-2 text-sm leading-6">
+                  Av personvernhensyn vises medlemslisten bare for
+                  gruppeadministratorer.
                 </p>
               </CardContent>
             </Card>
