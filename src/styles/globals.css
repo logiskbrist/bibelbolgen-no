@@ -270,7 +270,7 @@
   .bb-person-dot::after {
     background: var(--color-forest-950);
     color: var(--color-paper);
-    content: attr(title);
+    content: attr(data-label);
     font-size: 0.8rem;
     font-weight: 700;
     left: 50%;

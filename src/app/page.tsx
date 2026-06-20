@@ -1,59 +1,30 @@
 import Image from "next/image";
-import Link from "next/link";
-import { BibleTimeline } from "~/components/bible-timeline";
+import { GroupTimeline } from "~/components/group-timeline";
+import { SiteHeader } from "~/components/site-header";
 import { Button } from "~/components/ui/button";
+import { listPublicGroupTimelineEntries } from "~/server/groups/queries";
+import { getActiveReadingPlan } from "~/server/reading-plan/queries";
 
 export const metadata = {
   title: "Forside · Bibelbølgen",
 };
 
-const readingMarkers = [
-  { label: "Leseperiode", value: "5 måneder" },
-  { label: "Tekst", value: "Det nye testamentet" },
-  { label: "Rytme", value: "Dag for dag" },
-];
+export const dynamic = "force-dynamic";
 
-export default function ForsidePage() {
+export default async function ForsidePage() {
+  const [timelineGroups, readingPlan] = await Promise.all([
+    listPublicGroupTimelineEntries(),
+    getActiveReadingPlan(),
+  ]);
+  const timelineTotalDays =
+    timelineGroups.length > 0
+      ? Math.max(...timelineGroups.map((group) => group.totalDays))
+      : (readingPlan?.totalDays ?? 150);
+
   return (
-    <main className="bb-concept-bg min-h-screen overflow-hidden text-ink">
+    <main className="min-h-screen overflow-hidden text-ink">
       <section className="relative flex min-h-screen flex-col overflow-hidden">
-        <header className="bb-container relative z-10 flex items-center justify-between gap-6 py-6">
-          <Link
-            className="font-bold text-forest-700 text-lg sm:text-xl"
-            href="/"
-          >
-            Bibelbølgen
-          </Link>
-          <nav className="flex items-center gap-1 text-sm">
-            <Button
-              asChild
-              className="hidden font-semibold text-forest-950/70 hover:bg-sage-50 hover:text-forest-900 sm:inline-flex"
-              size="sm"
-              variant="ghost"
-            >
-              <Link href="/grupper">Grupper</Link>
-            </Button>
-            <Button
-              asChild
-              className="hidden font-semibold text-forest-950/70 hover:bg-sage-50 hover:text-forest-900 md:inline-flex"
-              size="sm"
-              variant="ghost"
-            >
-              <Link href="/start-gruppe">Start gruppe</Link>
-            </Button>
-            <Button
-              asChild
-              className="hidden font-semibold text-forest-950/70 hover:bg-sage-50 hover:text-forest-900 sm:inline-flex"
-              size="sm"
-              variant="ghost"
-            >
-              <Link href="/admin">Admin</Link>
-            </Button>
-            <Button asChild className="min-h-11" variant="secondary">
-              <Link href="/bli-med">Bli med</Link>
-            </Button>
-          </nav>
-        </header>
+        <SiteHeader />
 
         <div className="bb-container relative z-10 flex flex-1 flex-col items-center justify-center py-12 text-center">
           <div className="mx-auto max-w-4xl py-8">
@@ -73,9 +44,7 @@ export default function ForsidePage() {
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Button asChild className="min-h-11">
-                <a href="/brand/hjelp-meg-lese-bibelen.pdf">
-                  Last ned leseplanen
-                </a>
+                <a href="/bli-med">Bli med</a>
               </Button>
               <Button asChild className="min-h-11" variant="secondary">
                 <a href="#bok">Se boken</a>
@@ -83,41 +52,11 @@ export default function ForsidePage() {
             </div>
           </div>
 
-          <BibleTimeline className="mt-2 w-full pb-10" />
-        </div>
-      </section>
-
-      <section className="bg-forest-900 py-14 text-white" id="bok">
-        <div className="bb-container grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-          <div>
-            <Image
-              alt=""
-              className="mb-8 h-8 w-full object-cover opacity-35"
-              height={43}
-              src="/brand/wave-white.svg"
-              width={845}
-            />
-            <p className="font-bold text-sage-300">Laget for leseflyt</p>
-            <h2 className="mt-4 max-w-xl text-balance font-black font-display text-4xl leading-none sm:text-5xl">
-              Fem måneder. En plan du faktisk kan holde.
-            </h2>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            {readingMarkers.map((marker) => (
-              <div
-                className="border border-white/15 bg-white/8 p-5 shadow-pressed"
-                key={marker.label}
-              >
-                <p className="font-black text-3xl text-sage-200 leading-none">
-                  {marker.value}
-                </p>
-                <p className="mt-3 font-semibold text-sm text-white/72">
-                  {marker.label}
-                </p>
-              </div>
-            ))}
-          </div>
+          <GroupTimeline
+            className="mt-2 w-full pb-10"
+            groups={timelineGroups}
+            totalDays={timelineTotalDays}
+          />
         </div>
       </section>
 

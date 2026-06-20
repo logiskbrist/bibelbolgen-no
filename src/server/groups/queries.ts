@@ -96,6 +96,46 @@ export async function listPublicGroups() {
   return groups.map(withComputedProgress);
 }
 
+export async function listPublicGroupTimelineEntries() {
+  const groups = await getDb().group.findMany({
+    include: {
+      _count: {
+        select: {
+          memberships: { where: { status: MembershipStatus.ACTIVE } },
+        },
+      },
+      progressEvents: {
+        orderBy: { effectiveOn: "asc" },
+      },
+      readingPlan: {
+        select: { totalDays: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    where: {
+      status: GroupStatus.ACTIVE,
+      visibility: GroupVisibility.PUBLIC,
+    },
+  });
+
+  return groups.map((group) => {
+    const progress = calculateGroupDay({
+      progressEvents: group.progressEvents,
+      startsOn: group.startsOn,
+      timeZone: group.timeZone,
+      totalDays: group.readingPlan.totalDays,
+    });
+
+    return {
+      day: progress.currentDay,
+      id: group.id,
+      members: group._count.memberships,
+      name: group.name,
+      totalDays: progress.totalDays,
+    };
+  });
+}
+
 export async function getGroupBySlugForViewer(
   slug: string,
   viewerUserId?: string,
