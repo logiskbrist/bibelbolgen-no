@@ -1,7 +1,11 @@
 import "server-only";
 
 import { randomInt } from "node:crypto";
-import { createAuthSession, hashSecret } from "~/server/auth/sessions";
+import {
+  createAuthSession,
+  hashLowEntropySecret,
+  secretHashMatches,
+} from "~/server/auth/sessions";
 import { getDb } from "~/server/db";
 import { sendSmsBatch } from "~/server/messaging/sms";
 import {
@@ -71,7 +75,7 @@ export async function requestAdminLoginOtp(rawPhoneNumber: string) {
 
   await db.phoneOtpCode.create({
     data: {
-      codeHash: hashSecret(code),
+      codeHash: hashLowEntropySecret(code),
       expiresAt: otpExpiresAt(),
       phoneNumber,
       purpose: OtpPurpose.LOGIN,
@@ -125,7 +129,7 @@ export async function verifyAdminLoginOtp({
     throw new Error("For mange forsøk. Be om en ny kode.");
   }
 
-  if (otp.codeHash !== hashSecret(code.trim())) {
+  if (!secretHashMatches(code.trim(), otp.codeHash)) {
     await getDb().phoneOtpCode.update({
       data: {
         attempts: { increment: 1 },

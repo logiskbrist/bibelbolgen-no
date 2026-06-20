@@ -12,6 +12,10 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
+function isShortInviteCode(code: string) {
+  return /^\d{6}$/.test(code);
+}
+
 export default async function InvitasjonPage({
   params,
 }: {
@@ -42,7 +46,7 @@ export default async function InvitasjonPage({
         >
           <Badge className="h-auto gap-2 bg-sage-100 px-3 py-2 text-forest-900">
             <KeyRound className="size-4" />
-            Kode: {code}
+            {isShortInviteCode(code) ? `Kode: ${code}` : "Invitasjon"}
           </Badge>
         </PageHeader>
 

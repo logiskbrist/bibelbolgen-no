@@ -2,8 +2,10 @@ import "server-only";
 
 import { randomBytes, randomInt } from "node:crypto";
 import { requireGroupAdmin } from "~/server/auth/permissions";
-import { hashSecret } from "~/server/auth/sessions";
-import { getDb } from "~/server/db";
+import { hashLowEntropySecret, hashSecret } from "~/server/auth/sessions";
+import { type Database, getDb } from "~/server/db";
+
+type InviteStore = Pick<Database, "groupInvite">;
 
 function createInviteToken() {
   return randomBytes(24).toString("base64url");
@@ -33,7 +35,7 @@ export async function createGroupInvite({
 
   const invite = await getDb().groupInvite.create({
     data: {
-      codeHash: code ? hashSecret(code) : null,
+      codeHash: code ? hashLowEntropySecret(code) : null,
       createdByUserId: adminUserId,
       expiresAt,
       groupId,
@@ -49,12 +51,17 @@ export async function createGroupInvite({
   };
 }
 
-export async function findActiveInviteBySecret(secret: string) {
-  const secretHash = hashSecret(secret.trim());
-  const invite = await getDb().groupInvite.findFirst({
+export async function findActiveInviteBySecret(
+  secret: string,
+  db: InviteStore = getDb(),
+) {
+  const trimmedSecret = secret.trim();
+  const tokenHash = hashSecret(trimmedSecret);
+  const codeHash = hashLowEntropySecret(trimmedSecret);
+  const invite = await db.groupInvite.findFirst({
     include: { group: true },
     where: {
-      OR: [{ tokenHash: secretHash }, { codeHash: secretHash }],
+      OR: [{ tokenHash }, { codeHash }, { codeHash: tokenHash }],
       revokedAt: null,
     },
   });
@@ -95,15 +102,35 @@ export async function listGroupInvitesForAdmin({
   });
 }
 
-export async function consumeInvite(inviteId: string) {
-  return getDb().groupInvite.update({
+export async function consumeInvite(
+  inviteId: string,
+  db: InviteStore = getDb(),
+  now = new Date(),
+) {
+  const result = await db.groupInvite.updateMany({
     data: {
       usedCount: {
         increment: 1,
       },
     },
-    where: { id: inviteId },
+    where: {
+      AND: [
+        {
+          OR: [
+            { maxUses: null },
+            { usedCount: { lt: db.groupInvite.fields.maxUses } },
+          ],
+        },
+        {
+          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+        },
+      ],
+      id: inviteId,
+      revokedAt: null,
+    },
   });
+
+  return result.count > 0;
 }
 
 export async function revokeGroupInvite({

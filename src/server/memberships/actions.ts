@@ -3,7 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { requireActiveMembership } from "~/server/auth/permissions";
 import { createAuthSession } from "~/server/auth/sessions";
-import { getDb } from "~/server/db";
+import { type Database, getDb } from "~/server/db";
 import {
   consumeInvite,
   findActiveInviteBySecret,
@@ -34,16 +34,19 @@ const inviteJoinSchema = memberRegistrationSchema.extend({
   inviteSecret: z.string().trim().min(4).max(255),
 });
 
+type RegistrationStore = Pick<Database, "groupMembership" | "user">;
+
 function normalizePhoneNumber(phoneNumber: string) {
   return phoneNumber.replace(/[^\d+]/g, "");
 }
 
 async function upsertRegisteredUser(
   input: z.infer<typeof memberRegistrationSchema>,
+  db: RegistrationStore = getDb(),
 ) {
   const phoneNumber = normalizePhoneNumber(input.phoneNumber);
 
-  return getDb().user.upsert({
+  return db.user.upsert({
     create: {
       email: input.email,
       name: input.name,
@@ -119,52 +122,61 @@ export async function joinGroupWithInvite(
   rawInput: z.input<typeof inviteJoinSchema>,
 ) {
   const input = inviteJoinSchema.parse(rawInput);
-  const invite = await findActiveInviteBySecret(input.inviteSecret);
-
-  if (!invite) {
-    throw new Error("Invitasjonen er ugyldig eller utløpt.");
-  }
-
-  const user = await upsertRegisteredUser(input);
   const now = new Date();
+  const result = await getDb().$transaction(async (tx) => {
+    const invite = await findActiveInviteBySecret(input.inviteSecret, tx);
 
-  const membership = await getDb().groupMembership.upsert({
-    create: {
-      emailOptIn: input.emailOptIn,
-      emailOptInAt: input.emailOptIn ? now : null,
-      groupId: invite.groupId,
-      joinSource: MembershipJoinSource.INVITE_TOKEN,
-      smsOptIn: input.smsOptIn,
-      smsOptInAt: input.smsOptIn ? now : null,
-      userId: user.id,
-    },
-    update: {
-      emailOptIn: input.emailOptIn,
-      emailOptInAt: input.emailOptIn ? now : null,
-      emailOptedOutAt: input.emailOptIn ? null : now,
-      joinedAt: now,
-      joinSource: MembershipJoinSource.INVITE_TOKEN,
-      leftAt: null,
-      smsOptIn: input.smsOptIn,
-      smsOptInAt: input.smsOptIn ? now : null,
-      smsOptedOutAt: input.smsOptIn ? null : now,
-      status: MembershipStatus.ACTIVE,
-    },
-    where: {
-      groupId_userId: {
+    if (!invite) {
+      throw new Error("Invitasjonen er ugyldig eller utløpt.");
+    }
+
+    const consumed = await consumeInvite(invite.id, tx, now);
+
+    if (!consumed) {
+      throw new Error("Invitasjonen er brukt opp.");
+    }
+
+    const user = await upsertRegisteredUser(input, tx);
+
+    const membership = await tx.groupMembership.upsert({
+      create: {
+        emailOptIn: input.emailOptIn,
+        emailOptInAt: input.emailOptIn ? now : null,
         groupId: invite.groupId,
+        joinSource: MembershipJoinSource.INVITE_TOKEN,
+        smsOptIn: input.smsOptIn,
+        smsOptInAt: input.smsOptIn ? now : null,
         userId: user.id,
       },
-    },
+      update: {
+        emailOptIn: input.emailOptIn,
+        emailOptInAt: input.emailOptIn ? now : null,
+        emailOptedOutAt: input.emailOptIn ? null : now,
+        joinedAt: now,
+        joinSource: MembershipJoinSource.INVITE_TOKEN,
+        leftAt: null,
+        smsOptIn: input.smsOptIn,
+        smsOptInAt: input.smsOptIn ? now : null,
+        smsOptedOutAt: input.smsOptIn ? null : now,
+        status: MembershipStatus.ACTIVE,
+      },
+      where: {
+        groupId_userId: {
+          groupId: invite.groupId,
+          userId: user.id,
+        },
+      },
+    });
+
+    return { group: invite.group, membership, user };
   });
 
-  await consumeInvite(invite.id);
   await createAuthSession({
     kind: SessionKind.MEMBER_DEVICE,
-    userId: user.id,
+    userId: result.user.id,
   });
 
-  return { group: invite.group, membership, user };
+  return result;
 }
 
 export async function recordMemberCheckIn({

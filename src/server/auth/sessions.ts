@@ -1,6 +1,11 @@
 import "server-only";
 
-import { createHash, randomBytes } from "node:crypto";
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from "node:crypto";
 import { cookies } from "next/headers";
 import { getDb } from "~/server/db";
 import { SessionKind } from "../../../generated/prisma/client";
@@ -17,6 +22,38 @@ export function createSessionToken() {
 
 export function hashSecret(secret: string) {
   return createHash("sha256").update(secret).digest("hex");
+}
+
+function getLowEntropyHashKey() {
+  const key =
+    process.env.LOW_ENTROPY_SECRET_HASH_KEY ?? process.env.DATABASE_URL;
+
+  if (!key) {
+    throw new Error(
+      "Missing LOW_ENTROPY_SECRET_HASH_KEY or DATABASE_URL for code hashing.",
+    );
+  }
+
+  return key;
+}
+
+export function hashLowEntropySecret(secret: string) {
+  return createHmac("sha256", getLowEntropyHashKey())
+    .update(secret)
+    .digest("hex");
+}
+
+export function secretHashMatches(secret: string, hash: string) {
+  const candidateHashes = [hashLowEntropySecret(secret), hashSecret(secret)];
+
+  return candidateHashes.some((candidateHash) => {
+    const candidate = Buffer.from(candidateHash, "hex");
+    const stored = Buffer.from(hash, "hex");
+
+    return (
+      candidate.length === stored.length && timingSafeEqual(candidate, stored)
+    );
+  });
 }
 
 export function getSessionCookieName(kind: SessionKind) {
