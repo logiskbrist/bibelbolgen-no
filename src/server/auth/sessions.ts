@@ -25,8 +25,19 @@ export function hashSecret(secret: string) {
 }
 
 function getLowEntropyHashKey() {
-  const key =
-    process.env.LOW_ENTROPY_SECRET_HASH_KEY ?? process.env.DATABASE_URL;
+  const explicitKey = process.env.LOW_ENTROPY_SECRET_HASH_KEY;
+
+  if (explicitKey) {
+    return explicitKey;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "Missing LOW_ENTROPY_SECRET_HASH_KEY for production code hashing.",
+    );
+  }
+
+  const key = process.env.DATABASE_URL;
 
   if (!key) {
     throw new Error(
