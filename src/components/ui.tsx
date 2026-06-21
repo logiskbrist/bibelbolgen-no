@@ -81,7 +81,7 @@ export function StatCard({
   hint?: string;
 }) {
   return (
-    <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+    <Card className="border-forest-900/10 bg-paper py-0">
       <CardContent className="p-5">
         <p className="font-black text-4xl text-forest-900 leading-none">
           {value}

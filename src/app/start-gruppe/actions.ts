@@ -26,7 +26,6 @@ export async function startGroupAction(
   try {
     const contactOptIn = booleanFromForm(formData.get("contactOptIn"));
     const { group, user } = await createGroupWithStarter({
-      city: String(formData.get("city") ?? ""),
       description: String(formData.get("description") ?? ""),
       email: String(formData.get("email") ?? ""),
       emailOptIn: contactOptIn,

@@ -107,8 +107,8 @@
   --font-display: Barlow, var(--font-sans);
 
   --color-ink: #102016;
-  --color-surface: #fbfbf4;
-  --color-paper: #fffdf8;
+  --color-surface: white;
+  --color-paper: #f5f5f4;
   --color-forest-950: #14291b;
   --color-forest-900: #294d31;
   --color-forest-800: #315d3b;
@@ -131,8 +131,8 @@
   --radius-lg: 0.5rem;
   --radius-card: 0.5rem;
 
-  --shadow-soft: 0 1.25rem 3rem rgb(16 32 22 / 12%);
-  --shadow-pressed: inset 0 0 0 1px rgb(255 255 255 / 18%);
+  --shadow-soft: none;
+  --shadow-pressed: none;
 }
 
 @layer base {
@@ -160,7 +160,7 @@
     margin: 0;
     background: linear-gradient(
       180deg,
-      var(--color-surface),
+      var(--color-white),
       var(--color-sage-50)
     );
     color: var(--color-ink);
@@ -254,8 +254,6 @@
     background: var(--dot, var(--color-forest-900));
     border: 3px solid var(--color-paper);
     border-radius: 999px;
-    box-shadow: 0 7px 18px
-      color-mix(in oklab, var(--color-forest-900), transparent 82%);
     display: flex;
     height: var(--size);
     justify-content: center;
@@ -265,6 +263,15 @@
     transform: translate(-50%, -50%);
     width: var(--size);
     z-index: 2;
+  }
+
+  a.bb-person-dot {
+    cursor: pointer;
+  }
+
+  a.bb-person-dot:focus-visible {
+    outline: 3px solid var(--color-forest-900);
+    outline-offset: 4px;
   }
 
   .bb-person-dot::after {
@@ -287,7 +294,8 @@
     white-space: nowrap;
   }
 
-  .bb-person-dot:hover::after {
+  .bb-person-dot:hover::after,
+  .bb-person-dot:focus-visible::after {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }

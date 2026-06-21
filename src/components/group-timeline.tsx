@@ -1,14 +1,21 @@
+import Link from "next/link";
 import type { CSSProperties } from "react";
+import { TimelineStats } from "~/components/timeline-stats";
 
 export type GroupTimelineEntry = {
   day: number;
+  href: string | null;
   id: string;
   members: number;
   name: string;
+  totalDays: number;
 };
 
 const timelineWidth = 1000;
 const timelineInset = 28;
+const timelineHeight = 260;
+const waveBaseline = 178;
+const waveSvgTop = waveBaseline - 54;
 const trackWidth = timelineWidth - timelineInset * 2;
 const clusterOffsets = [-34, -64, -17, -88, -48, -108];
 const dotColors = [
@@ -22,14 +29,14 @@ const xJitter = [-9, 11, -4, 8, -13, 6];
 const yJitter = [-3, 5, -7, 2, 8, -5];
 
 function waveY(x: number) {
-  return 250 - Math.sin((x / timelineWidth) * Math.PI * 6) * 16;
+  return waveBaseline - Math.sin((x / timelineWidth) * Math.PI * 6) * 16;
 }
 
 function wavePoints() {
   return Array.from({ length: Math.ceil(timelineWidth / 24) + 1 }, (_, i) => {
     const x = Math.min(i * 24, timelineWidth);
 
-    return `${x},${waveY(x) - 196}`;
+    return `${x},${waveY(x) - waveSvgTop}`;
   }).join(" ");
 }
 
@@ -128,73 +135,99 @@ export function GroupTimeline({
       ? Math.max(...visibleGroups.map((group) => group.members))
       : 0;
   const visibleMarkerDays = getVisibleMarkerDays(timelineTotalDays);
+  const stats = {
+    completed150Days: groups.filter((group) => group.day >= 150).length,
+    peopleReading: groups.reduce((total, group) => total + group.members, 0),
+    waves: groups.length,
+  };
 
   return (
     <section aria-labelledby="timeline-title" className={className} id="bolgen">
+      <h2 className="sr-only" id="timeline-title">
+        Bølgetidslinje
+      </h2>
+      <div className="relative pt-1 pb-4">
+        <div className="relative w-full" style={{ height: timelineHeight }}>
+          {visibleGroups.length === 0 && (
+            <p className="absolute top-1/2 right-8 left-8 z-10 mx-auto max-w-md -translate-y-1/2 text-center font-semibold text-forest-950/60 text-sm leading-6">
+              Tidslinjen fylles når åpne grupper starter leseplanen.
+            </p>
+          )}
+          <svg
+            aria-hidden="true"
+            className="absolute left-0 h-[120px] w-full"
+            preserveAspectRatio="none"
+            style={{ top: waveSvgTop }}
+            viewBox={`0 0 ${timelineWidth} 120`}
+          >
+            <polyline
+              className="fill-none stroke-forest-700 [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:7]"
+              points={wavePoints()}
+            />
+          </svg>
 
-      <div className="overflow-hidden border border-forest-900/15 bg-paper/70 shadow-soft backdrop-blur-sm">
-        <div className="px-0 pt-8 pb-4">
-          <div className="relative h-[350px] w-full">
-            {visibleGroups.length === 0 && (
-              <p className="absolute top-1/2 right-8 left-8 z-10 mx-auto max-w-md -translate-y-1/2 text-center font-semibold text-forest-950/60 text-sm leading-6">
-                Tidslinjen fylles når åpne grupper starter leseplanen.
-              </p>
-            )}
-            <svg
-              aria-hidden="true"
-              className="absolute top-[196px] left-0 h-[120px] w-full"
-              preserveAspectRatio="none"
-              viewBox={`0 0 ${timelineWidth} 120`}
-            >
-              <polyline
-                className="fill-none stroke-forest-700 [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:7]"
-                points={wavePoints()}
-              />
-            </svg>
+          <div>
+            {visibleGroups.map((group, index) => {
+              const label = `${group.name}: ${group.members} personer, dag ${group.day}`;
+              const dotStyle = getDotStyle({
+                group,
+                groups: visibleGroups,
+                index,
+                maxMembers,
+                minMembers,
+                totalDays: timelineTotalDays,
+              });
 
-            <div aria-hidden="true">
-              {visibleGroups.map((group, index) => (
+              if (group.href) {
+                return (
+                  <Link
+                    aria-label={`Åpne ${label}`}
+                    className="bb-person-dot"
+                    data-label={label}
+                    href={group.href}
+                    key={group.id}
+                    style={dotStyle}
+                    title={label}
+                  />
+                );
+              }
+
+              return (
                 <span
+                  aria-label={label}
                   className="bb-person-dot"
-                  data-label={`${group.name}: ${group.members} personer, dag ${group.day}`}
+                  data-label={label}
                   key={group.id}
-                  style={getDotStyle({
-                    group,
-                    groups: visibleGroups,
-                    index,
-                    maxMembers,
-                    minMembers,
-                    totalDays: timelineTotalDays,
-                  })}
-                  title={`${group.name}: ${group.members} personer, dag ${group.day}`}
+                  role="img"
+                  style={dotStyle}
+                  title={label}
                 />
-              ))}
-            </div>
+              );
+            })}
+          </div>
 
-            <div
-              aria-hidden="true"
-              className="absolute right-0 bottom-0 left-0"
-            >
-              {visibleMarkerDays.map((day) => (
-                <div
-                  className="absolute bottom-0 text-center font-bold text-forest-950 text-xs"
-                  key={day}
-                  style={{
-                    left: `${(markerX(day, timelineTotalDays) / timelineWidth) * 100}%`,
-                    transform:
-                      day === timelineTotalDays
-                        ? "translateX(-100%)"
-                        : "translateX(-50%)",
-                  }}
-                >
-                  <span className="mx-auto mb-2 block h-7 w-px bg-forest-900/20" />
-                  Dag {day}
-                </div>
-              ))}
-            </div>
+          <div aria-hidden="true" className="absolute right-0 bottom-0 left-0">
+            {visibleMarkerDays.map((day) => (
+              <div
+                className="absolute bottom-0 whitespace-nowrap text-center font-bold text-forest-950 text-xs"
+                key={day}
+                style={{
+                  left: `${(markerX(day, timelineTotalDays) / timelineWidth) * 100}%`,
+                  transform:
+                    day === timelineTotalDays
+                      ? "translateX(-100%)"
+                      : "translateX(-50%)",
+                }}
+              >
+                <span className="mx-auto mb-2 block h-7 w-px bg-forest-900/20" />
+                Dag {day}
+              </div>
+            ))}
           </div>
         </div>
       </div>
+
+      <TimelineStats {...stats} />
     </section>
   );
 }

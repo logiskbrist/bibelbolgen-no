@@ -61,9 +61,7 @@ export default async function GruppesidePage({
 
         <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="bb-kicker">
-              {group.city ?? "Digital gruppe"} · {group.visibility}
-            </p>
+            <p className="bb-kicker">{group.visibility}</p>
             <h1 className="mt-2 font-black font-display text-4xl text-forest-900 leading-[0.95] sm:text-5xl">
               {group.name}
             </h1>
@@ -78,7 +76,7 @@ export default async function GruppesidePage({
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-start">
           <div className="space-y-8">
-            <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+            <Card className="border-forest-900/10 bg-paper py-0">
               <CardContent className="p-6">
                 <div className="flex items-end justify-between gap-6">
                   <div>
@@ -126,7 +124,7 @@ export default async function GruppesidePage({
               </CardContent>
             </Card>
 
-            <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+            <Card className="border-forest-900/10 bg-paper py-0">
               <CardHeader className="p-6 pb-0">
                 <CardTitle className="font-black font-display text-forest-900 text-xl">
                   Dagens lesing
@@ -164,7 +162,7 @@ export default async function GruppesidePage({
                 suggestedDay={Math.max(1, currentDay)}
               />
             ) : (
-              <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+              <Card className="border-forest-900/10 bg-paper py-0">
                 <CardContent className="p-6">
                   <h3 className="font-black font-display text-forest-900 text-xl">
                     Bli med i gruppa
@@ -180,7 +178,7 @@ export default async function GruppesidePage({
               </Card>
             )}
 
-            <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+            <Card className="border-forest-900/10 bg-paper py-0">
               <CardContent className="p-6">
                 <h3 className="font-black font-display text-forest-900 text-lg">
                   Deltakere

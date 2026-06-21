@@ -99,30 +99,17 @@ export function AdminCreateGroupForm() {
         />
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div>
-          <Label className="text-forest-950/80" htmlFor="city">
-            Sted
-          </Label>
-          <Input
-            className="mt-1.5 min-h-11 bg-surface font-medium"
-            id="city"
-            name="city"
-            type="text"
-          />
-        </div>
-        <div>
-          <Label className="text-forest-950/80" htmlFor="starts-on">
-            Startdato
-          </Label>
-          <Input
-            className="mt-1.5 min-h-11 bg-surface font-medium"
-            id="starts-on"
-            name="startsOn"
-            required
-            type="date"
-          />
-        </div>
+      <div>
+        <Label className="text-forest-950/80" htmlFor="starts-on">
+          Startdato
+        </Label>
+        <Input
+          className="mt-1.5 min-h-11 bg-surface font-medium"
+          id="starts-on"
+          name="startsOn"
+          required
+          type="date"
+        />
       </div>
 
       <div>

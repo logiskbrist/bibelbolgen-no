@@ -24,7 +24,7 @@ export default async function NyGruppePage() {
           title="Ny gruppe"
         />
 
-        <Card className="mt-8 max-w-3xl border-forest-900/10 bg-paper py-0 shadow-soft">
+        <Card className="mt-8 max-w-3xl border-forest-900/10 bg-paper py-0">
           <CardContent className="p-6">
             <AdminCreateGroupForm />
           </CardContent>

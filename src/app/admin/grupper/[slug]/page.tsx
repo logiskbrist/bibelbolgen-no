@@ -87,7 +87,7 @@ export default async function GruppeadminPage({
               <StatusBadge status={groupStatus} />
             </div>
             <p className="bb-muted mt-2 font-medium">
-              {group.city ?? "Digital gruppe"} · {group.visibility} · startet{" "}
+              {group.visibility} · startet{" "}
               {group.startsOn.toLocaleDateString("nb-NO", {
                 day: "numeric",
                 month: "long",
@@ -118,7 +118,7 @@ export default async function GruppeadminPage({
         </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-start">
-          <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+          <Card className="border-forest-900/10 bg-paper py-0">
             <CardHeader className="flex flex-row items-center justify-between border-forest-900/10 border-b p-6">
               <CardTitle className="font-black font-display text-forest-900 text-lg">
                 Deltakere
@@ -180,7 +180,7 @@ export default async function GruppeadminPage({
           </Card>
 
           <div className="space-y-6 lg:sticky lg:top-6">
-            <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+            <Card className="border-forest-900/10 bg-paper py-0">
               <CardHeader className="p-6 pb-0">
                 <CardTitle className="font-black font-display text-forest-900 text-lg">
                   Gruppeverktøy

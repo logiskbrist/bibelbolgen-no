@@ -39,7 +39,7 @@ export default async function AdminLoginPage({
       <SiteHeader showAdminSessionActions={false} variant="admin" />
 
       <main className="bb-container flex min-h-[calc(100svh-4rem)] items-center py-12">
-        <Card className="mx-auto w-full max-w-md border-forest-900/10 bg-paper py-0 shadow-soft">
+        <Card className="mx-auto w-full max-w-md border-forest-900/10 bg-paper py-0">
           <CardHeader className="p-6 pb-0">
             <CardTitle className="font-black font-display text-2xl text-forest-900">
               Logg inn som admin

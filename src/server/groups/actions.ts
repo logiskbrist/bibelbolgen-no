@@ -13,7 +13,6 @@ import {
 } from "../../../generated/prisma/client";
 
 const groupInputSchema = z.object({
-  city: z.string().trim().max(120).optional(),
   description: z.string().trim().max(5000).optional(),
   name: z.string().trim().min(2).max(160),
   startsOn: z.coerce.date(),
@@ -97,7 +96,6 @@ export async function createGroup({
 
   return getDb().group.create({
     data: {
-      city: data.city,
       createdByUserId: ownerUserId,
       description: data.description,
       name: data.name,
@@ -127,7 +125,6 @@ export async function createGroupWithStarter(
 
   const group = await getDb().group.create({
     data: {
-      city: data.city,
       createdByUserId: user.id,
       description: data.description,
       name: data.name,

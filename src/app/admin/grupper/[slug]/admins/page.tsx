@@ -48,7 +48,7 @@ export default async function GruppeadministratorerPage({
         </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_0.8fr]">
-          <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+          <Card className="border-forest-900/10 bg-paper py-0">
             <CardHeader className="border-forest-900/10 border-b p-6">
               <CardTitle className="font-black font-display text-forest-900 text-lg">
                 Nåværende administratorer
@@ -82,7 +82,7 @@ export default async function GruppeadministratorerPage({
             </CardContent>
           </Card>
 
-          <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+          <Card className="border-forest-900/10 bg-paper py-0">
             <CardHeader className="p-6 pb-0">
               <CardTitle className="font-black font-display text-forest-900 text-lg">
                 Legg til admin

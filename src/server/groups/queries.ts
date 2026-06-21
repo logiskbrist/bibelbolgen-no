@@ -114,7 +114,6 @@ export async function listPublicGroupTimelineEntries() {
     orderBy: { createdAt: "desc" },
     where: {
       status: GroupStatus.ACTIVE,
-      visibility: GroupVisibility.PUBLIC,
     },
   });
 
@@ -128,6 +127,10 @@ export async function listPublicGroupTimelineEntries() {
 
     return {
       day: progress.currentDay,
+      href:
+        group.visibility === GroupVisibility.PUBLIC
+          ? `/grupper/${group.slug}`
+          : null,
       id: group.id,
       members: group._count.memberships,
       name: group.name,

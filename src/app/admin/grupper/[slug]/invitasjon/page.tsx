@@ -54,7 +54,7 @@ export default async function GruppeinvitasjonPage({
         </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[0.85fr_1fr]">
-          <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+          <Card className="border-forest-900/10 bg-paper py-0">
             <CardHeader className="border-forest-900/10 border-b p-6">
               <CardTitle className="font-black font-display text-forest-900 text-lg">
                 Ny privat lenke og kode
@@ -69,7 +69,7 @@ export default async function GruppeinvitasjonPage({
             </CardContent>
           </Card>
 
-          <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+          <Card className="border-forest-900/10 bg-paper py-0">
             <CardHeader className="border-forest-900/10 border-b p-6">
               <CardTitle className="font-black font-display text-forest-900 text-lg">
                 Aktive invitasjoner

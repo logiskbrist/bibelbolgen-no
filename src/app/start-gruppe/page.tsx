@@ -45,7 +45,7 @@ export default function StartGruppePage() {
 
 function InfoCard({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
-    <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+    <Card className="border-forest-900/10 bg-paper py-0">
       <CardContent className="flex items-center gap-3 p-5">
         <div className="flex size-10 items-center justify-center rounded-md bg-sage-100 text-forest-900">
           {icon}

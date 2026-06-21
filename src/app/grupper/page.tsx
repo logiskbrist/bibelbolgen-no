@@ -54,7 +54,7 @@ export default async function GruppeoversiktPage() {
         </div>
 
         {groups.length === 0 ? (
-          <Card className="mt-10 border-forest-900/10 bg-paper py-0 shadow-soft">
+          <Card className="mt-10 border-forest-900/10 bg-paper py-0">
             <CardContent className="p-8">
               <h2 className="font-black font-display text-2xl text-forest-900">
                 Ingen åpne grupper ennå
@@ -76,7 +76,7 @@ export default async function GruppeoversiktPage() {
 
               return (
                 <Card
-                  className="border-forest-900/10 bg-paper py-0 shadow-soft transition-transform hover:-translate-y-0.5"
+                  className="border-forest-900/10 bg-paper py-0 transition-transform hover:-translate-y-0.5"
                   key={group.id}
                 >
                   <CardContent className="p-0">
@@ -90,7 +90,7 @@ export default async function GruppeoversiktPage() {
                             {group.name}
                           </h2>
                           <p className="mt-1 font-semibold text-forest-700 text-sm">
-                            {group.city ?? "Digital gruppe"} · startet{" "}
+                            Startet{" "}
                             {group.startsOn.toLocaleDateString("nb-NO", {
                               day: "numeric",
                               month: "long",

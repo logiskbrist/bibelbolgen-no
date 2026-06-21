@@ -40,7 +40,7 @@ export default async function GlobaleBrukerePage() {
         />
 
         <div className="mt-8 grid gap-8 lg:grid-cols-2">
-          <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+          <Card className="border-forest-900/10 bg-paper py-0">
             <CardContent className="p-6">
               <h2 className="font-black font-display text-forest-900 text-xl">
                 Globale administratorer
@@ -72,7 +72,7 @@ export default async function GlobaleBrukerePage() {
             </CardContent>
           </Card>
 
-          <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+          <Card className="border-forest-900/10 bg-paper py-0">
             <CardContent className="p-6">
               <h2 className="font-black font-display text-forest-900 text-xl">
                 Gruppeadministratorer
