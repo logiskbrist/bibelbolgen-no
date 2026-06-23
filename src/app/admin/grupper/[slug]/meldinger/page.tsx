@@ -31,9 +31,6 @@ export default async function GruppemeldingerPage({
   const smsRecipientCount = group.memberships.filter(
     (membership) => membership.smsOptIn,
   ).length;
-  const emailRecipientCount = group.memberships.filter(
-    (membership) => membership.emailOptIn,
-  ).length;
 
   return (
     <div className="min-h-screen bg-surface text-ink">
@@ -47,14 +44,13 @@ export default async function GruppemeldingerPage({
         <div className="mt-6">
           <PageHeader
             kicker={group.name}
-            lead="Send en SMS- eller e-postoppdatering til gruppa. Selve meldingen lagres ikke i databasen."
-            title="Send melding"
+            lead="Send en SMS-oppdatering til gruppa. Selve meldingen lagres ikke i databasen."
+            title="Send SMS"
           />
         </div>
 
         <div className="mt-8 max-w-xl">
           <MessageComposer
-            emailRecipientCount={emailRecipientCount}
             groupId={group.id}
             groupSlug={group.slug}
             smsRecipientCount={smsRecipientCount}

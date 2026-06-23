@@ -5,7 +5,11 @@ import { Avatar, PageHeader, StatusBadge } from "~/components/ui";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
-import { latestReportedDay, statusForProgress } from "~/lib/progress-status";
+import {
+  latestComputedMemberDay,
+  latestReportedDay,
+  statusForProgress,
+} from "~/lib/progress-status";
 import { requireAdminUserForPage } from "~/server/auth/page-guards";
 import { getAdminGroupBySlug } from "~/server/groups/queries";
 import { GroupAdminRole } from "../../../../../../generated/prisma/client";
@@ -58,8 +62,13 @@ export default async function GruppedeltakerePage({
               {group.memberships.map((membership) => {
                 const adminRole = adminRolesByUserId.get(membership.userId);
                 const reportedDay = latestReportedDay(membership.checkIns);
+                const computedDay = latestComputedMemberDay({
+                  checkIns: membership.checkIns,
+                  timeZone: group.timeZone,
+                  totalDays: group.progress.totalDays,
+                });
                 const memberStatus = statusForProgress(
-                  reportedDay,
+                  computedDay,
                   group.progress.currentDay,
                 );
 
@@ -91,8 +100,17 @@ export default async function GruppedeltakerePage({
                     <div className="text-right">
                       <StatusBadge status={memberStatus} />
                       <p className="mt-1 text-ink/45 text-xs">
-                        {reportedDay ? `Dag ${reportedDay}` : "Ikke meldt inn"}
+                        {typeof computedDay === "number"
+                          ? `Nå dag ${computedDay.toLocaleString("nb-NO")}`
+                          : "Ikke meldt inn"}
                       </p>
+                      {typeof reportedDay === "number" && (
+                        <p className="text-ink/40 text-xs">
+                          {computedDay !== reportedDay
+                            ? `meldte dag ${reportedDay}`
+                            : "oppdatert automatisk"}
+                        </p>
+                      )}
                     </div>
                   </li>
                 );

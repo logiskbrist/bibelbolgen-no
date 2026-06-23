@@ -8,6 +8,12 @@ type ProgressEvent = {
   dayNumber: number | null;
 };
 
+type MemberProgressCheckIn = {
+  checkedInAt: Date;
+  forDate: Date | null;
+  reportedDayNumber: number | null;
+};
+
 const dateFormatterCache = new Map<string, Intl.DateTimeFormat>();
 
 function getDateFormatter(timeZone: string) {
@@ -150,5 +156,91 @@ export function calculateGroupDay({
     currentDay,
     percent: Math.round((currentDay / totalDays) * 100),
     totalDays,
+  };
+}
+
+export function calculateMemberDay({
+  checkIn,
+  now = new Date(),
+  timeZone,
+  totalDays,
+}: {
+  checkIn: MemberProgressCheckIn;
+  now?: Date;
+  timeZone: string;
+  totalDays: number;
+}) {
+  if (typeof checkIn.reportedDayNumber !== "number") {
+    return null;
+  }
+
+  const baselineDate = checkIn.forDate ?? checkIn.checkedInAt;
+  const daysSinceBaseline = calendarDaysBetween(baselineDate, now, timeZone);
+
+  return clampDay(checkIn.reportedDayNumber + daysSinceBaseline, totalDays);
+}
+
+export function calculateLatestMemberDay({
+  checkIns,
+  now = new Date(),
+  timeZone,
+  totalDays,
+}: {
+  checkIns: MemberProgressCheckIn[];
+  now?: Date;
+  timeZone: string;
+  totalDays: number;
+}) {
+  const latestCheckIn = [...checkIns]
+    .sort((a, b) => b.checkedInAt.getTime() - a.checkedInAt.getTime())
+    .find((checkIn) => typeof checkIn.reportedDayNumber === "number");
+
+  if (!latestCheckIn) {
+    return null;
+  }
+
+  return calculateMemberDay({
+    checkIn: latestCheckIn,
+    now,
+    timeZone,
+    totalDays,
+  });
+}
+
+export function calculateAverageMemberDay({
+  memberships,
+  now = new Date(),
+  timeZone,
+  totalDays,
+}: {
+  memberships: { checkIns: MemberProgressCheckIn[] }[];
+  now?: Date;
+  timeZone: string;
+  totalDays: number;
+}) {
+  const memberDays = memberships
+    .map((membership) =>
+      calculateLatestMemberDay({
+        checkIns: membership.checkIns,
+        now,
+        timeZone,
+        totalDays,
+      }),
+    )
+    .filter((day): day is number => typeof day === "number");
+
+  if (memberDays.length === 0) {
+    return {
+      averageDay: null,
+      reportingMemberCount: 0,
+    };
+  }
+
+  const averageDay =
+    memberDays.reduce((sum, day) => sum + day, 0) / memberDays.length;
+
+  return {
+    averageDay: Math.round(averageDay * 10) / 10,
+    reportingMemberCount: memberDays.length,
   };
 }

@@ -2,7 +2,10 @@ import "server-only";
 
 import { requireGlobalAdmin } from "~/server/auth/permissions";
 import { getDb } from "~/server/db";
-import { calculateGroupDay } from "~/server/reading-plan/progress";
+import {
+  calculateAverageMemberDay,
+  calculateGroupDay,
+} from "~/server/reading-plan/progress";
 import {
   GroupStatus,
   GroupVisibility,
@@ -47,6 +50,20 @@ export async function listAllGroupsForGlobalAdmin(adminUserId: string) {
           memberships: { where: { status: MembershipStatus.ACTIVE } },
         },
       },
+      memberships: {
+        select: {
+          checkIns: {
+            orderBy: { checkedInAt: "desc" },
+            select: {
+              checkedInAt: true,
+              forDate: true,
+              reportedDayNumber: true,
+            },
+            take: 1,
+          },
+        },
+        where: { status: MembershipStatus.ACTIVE },
+      },
       progressEvents: { orderBy: { effectiveOn: "asc" } },
       readingPlan: true,
     },
@@ -56,6 +73,11 @@ export async function listAllGroupsForGlobalAdmin(adminUserId: string) {
   return groups.map((group) => ({
     ...group,
     isActive: group.status === GroupStatus.ACTIVE,
+    memberProgress: calculateAverageMemberDay({
+      memberships: group.memberships,
+      timeZone: group.timeZone,
+      totalDays: group.readingPlan.totalDays,
+    }),
     progress: calculateGroupDay({
       progressEvents: group.progressEvents,
       startsOn: group.startsOn,

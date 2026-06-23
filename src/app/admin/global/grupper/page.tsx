@@ -69,6 +69,13 @@ export default async function GlobaleGrupperPage() {
                     </span>
                   </div>
                   <ProgressBar value={group.progress.percent} />
+                  {typeof group.memberProgress.averageDay === "number" && (
+                    <p className="mt-2 text-ink/50 text-xs">
+                      Snitt innmeldt: dag{" "}
+                      {group.memberProgress.averageDay.toLocaleString("nb-NO")}{" "}
+                      · {group.memberProgress.reportingMemberCount} rapportert
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -7,7 +7,10 @@ import {
   requireGroupAdmin,
 } from "~/server/auth/permissions";
 import { getDb } from "~/server/db";
-import { calculateGroupDay } from "~/server/reading-plan/progress";
+import {
+  calculateAverageMemberDay,
+  calculateGroupDay,
+} from "~/server/reading-plan/progress";
 import {
   GroupStatus,
   GroupVisibility,
@@ -25,13 +28,29 @@ function withComputedProgress<
       effectiveOn: Date;
       type: ProgressEventForCalculation["type"];
     }[];
+    memberships?: {
+      checkIns: {
+        checkedInAt: Date;
+        forDate: Date | null;
+        reportedDayNumber: number | null;
+      }[];
+    }[];
     readingPlan: { totalDays: number };
     startsOn: Date;
     timeZone: string;
   },
 >(group: T) {
+  const memberProgress = group.memberships
+    ? calculateAverageMemberDay({
+        memberships: group.memberships,
+        timeZone: group.timeZone,
+        totalDays: group.readingPlan.totalDays,
+      })
+    : null;
+
   return {
     ...group,
+    memberProgress,
     progress: calculateGroupDay({
       progressEvents: group.progressEvents,
       startsOn: group.startsOn,
@@ -74,7 +93,11 @@ export async function listPublicGroups() {
         select: {
           checkIns: {
             orderBy: { checkedInAt: "desc" },
-            select: { reportedDayNumber: true },
+            select: {
+              checkedInAt: true,
+              forDate: true,
+              reportedDayNumber: true,
+            },
             take: 1,
           },
           id: true,
@@ -155,7 +178,11 @@ export async function getGroupBySlugForViewer(
         select: {
           checkIns: {
             orderBy: { checkedInAt: "desc" },
-            select: { reportedDayNumber: true },
+            select: {
+              checkedInAt: true,
+              forDate: true,
+              reportedDayNumber: true,
+            },
             take: 1,
           },
           id: true,
@@ -258,7 +285,11 @@ export async function listGroupsForAdmin(adminUserId: string) {
         select: {
           checkIns: {
             orderBy: { checkedInAt: "desc" },
-            select: { reportedDayNumber: true },
+            select: {
+              checkedInAt: true,
+              forDate: true,
+              reportedDayNumber: true,
+            },
             take: 1,
           },
           id: true,

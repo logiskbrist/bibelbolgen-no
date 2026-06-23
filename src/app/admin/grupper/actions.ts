@@ -35,12 +35,6 @@ function visibilityValue(formData: FormData) {
     : GroupVisibility.PUBLIC;
 }
 
-function messageChannelValue(formData: FormData) {
-  return textValue(formData, "channel") === MessageChannel.EMAIL
-    ? MessageChannel.EMAIL
-    : MessageChannel.SMS;
-}
-
 const groupIdSchema = z.string().trim().min(1);
 
 export async function createAdminGroupAction(
@@ -96,9 +90,8 @@ export async function sendAdminGroupMessageAction(
     const dispatch = await sendGroupMessage({
       adminUserId: admin.id,
       body: textValue(formData, "body"),
-      channel: messageChannelValue(formData),
+      channel: MessageChannel.SMS,
       groupId,
-      subject: textValue(formData, "subject") || undefined,
     });
 
     revalidatePath(`/admin/grupper/${textValue(formData, "groupSlug")}`);

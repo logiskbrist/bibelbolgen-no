@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
+import { getCurrentUser } from "~/server/auth/permissions";
+import { SessionKind, SystemRole } from "../../generated/prisma/client";
 
 interface NavLink {
   href: string;
@@ -49,7 +51,7 @@ function BrandLink({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
-export function SiteHeader({
+export async function SiteHeader({
   active,
   showAdminSessionActions = true,
   variant = "public",
@@ -59,6 +61,11 @@ export function SiteHeader({
   variant?: "public" | "admin";
 }) {
   const isAdmin = variant === "admin";
+  const adminUser =
+    isAdmin && showAdminSessionActions
+      ? await getCurrentUser(SessionKind.ADMIN)
+      : null;
+  const isGlobalAdmin = adminUser?.systemRole === SystemRole.GLOBAL_ADMIN;
 
   return (
     <header className="relative z-10">
@@ -98,6 +105,21 @@ export function SiteHeader({
           )}
           {isAdmin && (
             <>
+              {isGlobalAdmin && (
+                <Button
+                  asChild
+                  className={cn(
+                    "font-semibold",
+                    active === "/admin/global"
+                      ? "bg-sage-100 text-forest-900 hover:bg-sage-100"
+                      : "text-forest-950/70 hover:bg-sage-50 hover:text-forest-900",
+                  )}
+                  size="sm"
+                  variant={active === "/admin/global" ? "secondary" : "ghost"}
+                >
+                  <Link href="/admin/global">Global admin</Link>
+                </Button>
+              )}
               <Button
                 asChild
                 className="font-semibold text-forest-950/70 hover:bg-sage-50 hover:text-forest-900"

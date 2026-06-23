@@ -10,11 +10,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MessageComposer } from "~/components/message-composer";
 import { SiteHeader } from "~/components/site-header";
-import { Avatar, ProgressBar, StatCard, StatusBadge } from "~/components/ui";
+import { Avatar, ProgressBar, StatusBadge } from "~/components/ui";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { latestReportedDay, statusForProgress } from "~/lib/progress-status";
+import {
+  latestComputedMemberDay,
+  statusForProgress,
+} from "~/lib/progress-status";
 import { requireAdminUserForPage } from "~/server/auth/page-guards";
 import { getAdminGroupBySlug } from "~/server/groups/queries";
 import { GroupAdminRole } from "../../../../../generated/prisma/client";
@@ -38,31 +41,27 @@ export default async function GruppeadminPage({
     group.admins.map((assignment) => [assignment.userId, assignment.role]),
   );
   const memberRows = group.memberships.map((membership) => {
-    const reportedDay = latestReportedDay(membership.checkIns);
+    const computedDay = latestComputedMemberDay({
+      checkIns: membership.checkIns,
+      timeZone: group.timeZone,
+      totalDays: group.progress.totalDays,
+    });
 
     return {
+      computedDay,
       isAdmin: adminRolesByUserId.has(membership.userId),
       membership,
-      reportedDay,
-      status: statusForProgress(reportedDay, group.progress.currentDay),
+      status: statusForProgress(computedDay, group.progress.currentDay),
     };
   });
-  const behindCount = memberRows.filter(
-    (member) => member.status === "behind",
-  ).length;
-  const onTrackCount = memberRows.filter(
-    (member) => member.status === "on-track" || member.status === "ahead",
-  ).length;
   const smsRecipientCount = group.memberships.filter(
     (membership) => membership.smsOptIn,
-  ).length;
-  const emailRecipientCount = group.memberships.filter(
-    (membership) => membership.emailOptIn,
   ).length;
   const groupStatus =
     group.progress.currentDay > 0
       ? ("on-track" as const)
       : ("not-started" as const);
+  const averageMemberDay = group.memberProgress?.averageDay;
 
   return (
     <div className="min-h-screen bg-surface text-ink">
@@ -78,7 +77,7 @@ export default async function GruppeadminPage({
           <Link href="/admin">← Alle grupper</Link>
         </Button>
 
-        <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="mt-5 mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="flex items-center gap-3">
               <h1 className="font-black font-display text-4xl text-forest-900 leading-tight">
@@ -102,19 +101,26 @@ export default async function GruppeadminPage({
           </Button>
         </div>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-4">
-          <StatCard label="Deltakere" value={group.memberships.length} />
-          <StatCard label="I rute" value={onTrackCount} />
-          <StatCard label="Bak planen" value={behindCount} />
-          <StatCard
-            hint={`dag ${group.progress.currentDay} av ${group.progress.totalDays}`}
-            label="Fremdrift"
-            value={`${group.progress.percent}%`}
-          />
+        <div className="mt-6 flex items-end justify-between gap-6 border-gray-300 border-t pt-2">
+          <div>
+            <p className="mt-2 font-black font-display text-3xl text-forest-900">
+              Dag {group.progress.currentDay} av {group.progress.totalDays}
+            </p>
+            <p className="text-ink/50 text-sm">Gruppas fremdrift</p>
+          </div>
+          <p className="font-black text-5xl text-forest-900 leading-none">
+            {group.progress.percent}%
+          </p>
         </div>
 
         <div className="mt-6">
           <ProgressBar value={group.progress.percent} />
+          {typeof averageMemberDay === "number" && (
+            <p className="mt-2 text-ink/50 text-xs">
+              Snitt innmeldt: dag {averageMemberDay.toLocaleString("nb-NO")} ·{" "}
+              {group.memberProgress?.reportingMemberCount} rapportert
+            </p>
+          )}
         </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-start">
@@ -138,7 +144,7 @@ export default async function GruppeadminPage({
             <CardContent className="p-0">
               <ul className="divide-y divide-forest-900/10">
                 {memberRows.map(
-                  ({ isAdmin, membership, reportedDay, status }) => {
+                  ({ computedDay, isAdmin, membership, status }) => {
                     const adminRole = adminRolesByUserId.get(membership.userId);
 
                     return (
@@ -166,8 +172,8 @@ export default async function GruppeadminPage({
                         <div className="text-right">
                           <StatusBadge status={status} />
                           <p className="mt-1 text-ink/45 text-xs">
-                            {reportedDay
-                              ? `Sist sett dag ${reportedDay}`
+                            {typeof computedDay === "number"
+                              ? `På dag ${computedDay.toLocaleString("nb-NO")}`
                               : "Ingen tilbakemelding"}
                           </p>
                         </div>
@@ -211,7 +217,6 @@ export default async function GruppeadminPage({
             </Card>
 
             <MessageComposer
-              emailRecipientCount={emailRecipientCount}
               groupId={group.id}
               groupSlug={group.slug}
               smsRecipientCount={smsRecipientCount}

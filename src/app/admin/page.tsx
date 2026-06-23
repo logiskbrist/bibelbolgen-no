@@ -1,7 +1,7 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { SiteHeader } from "~/components/site-header";
-import { ProgressBar, StatCard, StatusBadge } from "~/components/ui";
+import { ProgressBar, StatusBadge } from "~/components/ui";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -18,10 +18,12 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { latestReportedDay, statusForProgress } from "~/lib/progress-status";
+import {
+  latestComputedMemberDay,
+  statusForProgress,
+} from "~/lib/progress-status";
 import { requireAdminUserForPage } from "~/server/auth/page-guards";
 import { listGroupsForAdmin } from "~/server/groups/queries";
-import { getActiveReadingPlan } from "~/server/reading-plan/queries";
 
 export const metadata = {
   title: "Adminoversikt · Bibelbølgen",
@@ -31,19 +33,22 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminoversiktPage() {
   const admin = await requireAdminUserForPage("/admin");
-  const [groups, readingPlan] = await Promise.all([
-    listGroupsForAdmin(admin.id),
-    getActiveReadingPlan(),
-  ]);
+  const groups = await listGroupsForAdmin(admin.id);
   const groupSummaries = groups.map((group) => {
     const memberStatuses = group.memberships.map((membership) =>
       statusForProgress(
-        latestReportedDay(membership.checkIns),
+        latestComputedMemberDay({
+          checkIns: membership.checkIns,
+          timeZone: group.timeZone,
+          totalDays: group.progress.totalDays,
+        }),
         group.progress.currentDay,
       ),
     );
+    const averageMemberDay = group.memberProgress?.averageDay;
 
     return {
+      averageMemberDay,
       behindCount: memberStatuses.filter((status) => status === "behind")
         .length,
       currentLabel:
@@ -59,18 +64,6 @@ export default async function AdminoversiktPage() {
           : ("not-started" as const),
     };
   });
-  const summary = {
-    behindCount: groupSummaries.reduce(
-      (sum, group) => sum + group.behindCount,
-      0,
-    ),
-    groupCount: groups.length,
-    memberCount: groupSummaries.reduce(
-      (sum, group) => sum + group.memberCount,
-      0,
-    ),
-  };
-
   return (
     <div className="min-h-screen bg-surface text-ink">
       <SiteHeader variant="admin" />
@@ -95,27 +88,12 @@ export default async function AdminoversiktPage() {
           </Button>
         </div>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Grupper" value={summary.groupCount} />
-          <StatCard label="Deltakere" value={summary.memberCount} />
-          <StatCard
-            hint="trenger oppfølging"
-            label="Deltakere bak planen"
-            value={summary.behindCount}
-          />
-          <StatCard
-            hint={readingPlan?.title}
-            label="Dager i leseplanen"
-            value={readingPlan?.totalDays ?? 0}
-          />
-        </div>
-
         <Card className="mt-8 border-forest-900/10 bg-paper py-0">
           <CardHeader className="border-forest-900/10 border-b p-6">
             <CardTitle className="font-black font-display text-forest-900 text-lg">
               Grupper
             </CardTitle>
-            <CardDescription>Sortert etter fremdrift</CardDescription>
+            <CardDescription>Sortert etter startsdato</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
@@ -130,7 +108,7 @@ export default async function AdminoversiktPage() {
               <TableBody>
                 {[...groupSummaries]
                   .sort(
-                    (a, b) =>
+                    (b, a) =>
                       b.group.progress.currentDay - a.group.progress.currentDay,
                   )
                   .map((summary) => {
@@ -147,6 +125,10 @@ export default async function AdminoversiktPage() {
                           </Link>
                           <p className="text-ink/50 text-xs">
                             {summary.currentLabel}
+                            {typeof summary.averageMemberDay === "number" &&
+                              ` · snitt dag ${summary.averageMemberDay.toLocaleString(
+                                "nb-NO",
+                              )}`}
                           </p>
                         </TableCell>
                         <TableCell>

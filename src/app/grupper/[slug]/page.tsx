@@ -35,6 +35,7 @@ export default async function GruppesidePage({
 
   const currentDay = group.progress.currentDay;
   const totalDays = group.progress.totalDays;
+  const averageMemberDay = group.memberProgress?.averageDay;
   const currentReading = group.readingPlan.days.find(
     (day) => day.dayNumber === currentDay,
   );
@@ -99,6 +100,13 @@ export default async function GruppesidePage({
                     <span>Start</span>
                     <span>Fullført</span>
                   </div>
+                  {typeof averageMemberDay === "number" && (
+                    <p className="mt-3 font-semibold text-forest-950/70 text-sm">
+                      Deltakernes innmeldte snitt er dag{" "}
+                      {averageMemberDay.toLocaleString("nb-NO")} av {totalDays}.
+                      Det øker automatisk dag for dag.
+                    </p>
+                  )}
                 </div>
 
                 <ol className="mt-6 flex flex-wrap gap-2">
