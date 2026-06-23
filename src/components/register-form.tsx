@@ -1,7 +1,9 @@
 "use client";
 
-import { CheckCircle2, RotateCcw, UserPlus } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, UserPlus } from "lucide-react";
+import Link from "next/link";
+import { useActionState, useState } from "react";
+import type { RegisterFormState } from "~/app/bli-med/actions";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -18,20 +20,32 @@ interface GroupOption {
   city: string;
 }
 
+type RegisterFormAction = (
+  state: RegisterFormState,
+  formData: FormData,
+) => Promise<RegisterFormState>;
+
+const initialState: RegisterFormState = {
+  status: "idle",
+};
+
 export function RegisterForm({
+  action,
   groupOptions,
   defaultGroup,
+  inviteSecret,
 }: {
+  action: RegisterFormAction;
   groupOptions: GroupOption[];
   defaultGroup?: string;
+  inviteSecret?: string;
 }) {
-  const [submitted, setSubmitted] = useState(false);
   const [group, setGroup] = useState(defaultGroup ?? "");
   const [consent, setConsent] = useState(false);
+  const [state, formAction, isPending] = useActionState(action, initialState);
+  const hasGroups = groupOptions.length > 0;
 
-  if (submitted) {
-    const chosen = groupOptions.find((g) => g.slug === group);
-
+  if (state.status === "success") {
     return (
       <Card className="border-forest-500/30 bg-sage-100 py-0 text-center">
         <CardContent className="p-8">
@@ -40,22 +54,13 @@ export function RegisterForm({
             Du er påmeldt!
           </h2>
           <p className="bb-muted mt-2">
-            {chosen
-              ? `Velkommen til ${chosen.name}. Lederen tar kontakt med deg.`
-              : "Velkommen! Lederen tar kontakt med deg."}
+            {state.message ?? "Velkommen! Lederen tar kontakt med deg."}
           </p>
-          <Button
-            className="mt-5"
-            onClick={() => {
-              setSubmitted(false);
-              setConsent(false);
-            }}
-            type="button"
-            variant="secondary"
-          >
-            <RotateCcw />
-            Meld på en til
-          </Button>
+          {state.groupSlug && (
+            <Button asChild className="mt-5" variant="secondary">
+              <Link href={`/grupper/${state.groupSlug}`}>Gå til gruppa</Link>
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
@@ -64,21 +69,27 @@ export function RegisterForm({
   return (
     <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
       <CardContent className="p-6 sm:p-8">
-        <form
-          className="space-y-5"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!consent || !group) {
-              return;
-            }
-            setSubmitted(true);
-          }}
-        >
+        <form action={formAction} className="space-y-5">
+          {inviteSecret && (
+            <input name="inviteSecret" type="hidden" value={inviteSecret} />
+          )}
+          <input
+            name="smsOptIn"
+            type="hidden"
+            value={consent ? "true" : "false"}
+          />
+          <input
+            name="emailOptIn"
+            type="hidden"
+            value={consent ? "true" : "false"}
+          />
+
           <Field label="Fullt navn" name="name">
             <Input
               autoComplete="name"
               className="min-h-11 bg-surface font-medium"
               id="name"
+              name="name"
               placeholder="Ola Nordmann"
               required
               type="text"
@@ -91,6 +102,7 @@ export function RegisterForm({
                 autoComplete="tel"
                 className="min-h-11 bg-surface font-medium"
                 id="phone"
+                name="phoneNumber"
                 placeholder="+47 900 00 000"
                 required
                 type="tel"
@@ -101,6 +113,7 @@ export function RegisterForm({
                 autoComplete="email"
                 className="min-h-11 bg-surface font-medium"
                 id="email"
+                name="email"
                 placeholder="ola@example.no"
                 required
                 type="email"
@@ -116,12 +129,13 @@ export function RegisterForm({
             <NativeSelect
               className="w-full"
               id="group"
+              name="groupSlug"
               onChange={(event) => setGroup(event.target.value)}
               required
               value={group}
             >
               <NativeSelectOption disabled value="">
-                Velg gruppe ...
+                {hasGroups ? "Velg gruppe ..." : "Ingen åpne grupper ennå"}
               </NativeSelectOption>
               {groupOptions.map((option) => (
                 <NativeSelectOption key={option.slug} value={option.slug}>
@@ -130,6 +144,13 @@ export function RegisterForm({
               ))}
             </NativeSelect>
           </Field>
+
+          {!hasGroups && !inviteSecret && (
+            <p className="rounded-md border border-forest-900/10 bg-surface p-3 text-ink/65 text-sm leading-6">
+              Det finnes ingen åpne grupper i databasen ennå. Start en gruppe
+              først, eller bruk en privat invitasjonslenke.
+            </p>
+          )}
 
           <div className="flex items-start gap-3">
             <Checkbox
@@ -147,13 +168,19 @@ export function RegisterForm({
             </Label>
           </div>
 
+          {state.status === "error" && (
+            <p className="rounded-md border border-stone-500/30 bg-stone-100 p-3 font-semibold text-sm text-stone-800">
+              {state.message}
+            </p>
+          )}
+
           <Button
             className="min-h-11 w-full"
-            disabled={!consent || !group}
+            disabled={isPending || !consent || (!group && !inviteSecret)}
             type="submit"
           >
             <UserPlus />
-            Meld meg på
+            {isPending ? "Melder på ..." : "Meld meg på"}
           </Button>
         </form>
       </CardContent>

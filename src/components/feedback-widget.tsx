@@ -1,13 +1,11 @@
 "use client";
 
+import { CheckCircle2, Clock3, Send, TrendingUp } from "lucide-react";
+import { useActionState, useState } from "react";
 import {
-  CheckCircle2,
-  Clock3,
-  RotateCcw,
-  Send,
-  TrendingUp,
-} from "lucide-react";
-import { useState } from "react";
+  type CheckInFormState,
+  recordMemberCheckInAction,
+} from "~/app/grupper/actions";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
@@ -21,12 +19,27 @@ const options = [
   { value: "behind", label: "Litt bak", Icon: Clock3 },
 ] as const;
 
-export function FeedbackWidget({ suggestedDay }: { suggestedDay: number }) {
+const initialState: CheckInFormState = {
+  status: "idle",
+};
+
+export function FeedbackWidget({
+  groupId,
+  groupSlug,
+  suggestedDay,
+}: {
+  groupId: string;
+  groupSlug: string;
+  suggestedDay: number;
+}) {
   const [day, setDay] = useState(suggestedDay);
   const [choice, setChoice] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
+  const [state, formAction, isPending] = useActionState(
+    recordMemberCheckInAction,
+    initialState,
+  );
 
-  if (sent) {
+  if (state.status === "success") {
     return (
       <Card className="border-forest-500/30 bg-sage-100 py-0 text-center">
         <CardContent className="p-6">
@@ -35,21 +48,9 @@ export function FeedbackWidget({ suggestedDay }: { suggestedDay: number }) {
             Takk for tilbakemeldingen!
           </p>
           <p className="bb-muted mt-1 text-sm">
-            Du er registrert på dag {day}. Lederen din ser hvordan gruppa ligger
-            an.
+            {state.message ??
+              `Du er registrert på dag ${state.reportedDayNumber ?? day}.`}
           </p>
-          <Button
-            className="mt-4"
-            onClick={() => {
-              setSent(false);
-              setChoice(null);
-            }}
-            type="button"
-            variant="secondary"
-          >
-            <RotateCcw />
-            Endre svar
-          </Button>
         </CardContent>
       </Card>
     );
@@ -66,63 +67,74 @@ export function FeedbackWidget({ suggestedDay }: { suggestedDay: number }) {
           oppmuntring.
         </p>
 
-        <RadioGroup
-          className="mt-4 grid grid-cols-3 gap-2"
-          onValueChange={(value) => setChoice(value)}
-          value={choice ?? ""}
-        >
-          {options.map((option) => {
-            const Icon = option.Icon;
-            const inputId = `feedback-${option.value}`;
+        <form action={formAction}>
+          <input name="groupId" type="hidden" value={groupId} />
+          <input name="groupSlug" type="hidden" value={groupSlug} />
 
-            return (
-              <div key={option.value}>
-                <RadioGroupItem
-                  className="sr-only"
-                  id={inputId}
-                  value={option.value}
-                />
-                <Label
-                  className={cn(
-                    "flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-md border px-3 py-3 text-center font-bold text-sm transition-colors",
-                    choice === option.value
-                      ? "border-forest-700 bg-sage-100 text-forest-900"
-                      : "border-forest-900/15 bg-surface text-forest-950/70 hover:border-forest-500",
-                  )}
-                  htmlFor={inputId}
-                >
-                  <Icon className="size-5" />
-                  <span className="mt-2">{option.label}</span>
-                </Label>
-              </div>
-            );
-          })}
-        </RadioGroup>
+          <RadioGroup
+            className="mt-4 grid grid-cols-3 gap-2"
+            onValueChange={(value) => setChoice(value)}
+            value={choice ?? ""}
+          >
+            {options.map((option) => {
+              const Icon = option.Icon;
+              const inputId = `feedback-${option.value}`;
 
-        <div className="mt-5">
-          <Label className="text-forest-950/80" htmlFor="plan-day">
-            Hvilken dag i planen er du på?
-          </Label>
-          <Input
-            className="mt-1.5 min-h-11 bg-surface font-medium"
-            id="plan-day"
-            max={150}
-            min={0}
-            onChange={(event) => setDay(Number(event.target.value))}
-            type="number"
-            value={day}
-          />
-        </div>
+              return (
+                <div key={option.value}>
+                  <RadioGroupItem
+                    className="sr-only"
+                    id={inputId}
+                    value={option.value}
+                  />
+                  <Label
+                    className={cn(
+                      "flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-md border px-3 py-3 text-center font-bold text-sm transition-colors",
+                      choice === option.value
+                        ? "border-forest-700 bg-sage-100 text-forest-900"
+                        : "border-forest-900/15 bg-surface text-forest-950/70 hover:border-forest-500",
+                    )}
+                    htmlFor={inputId}
+                  >
+                    <Icon className="size-5" />
+                    <span className="mt-2">{option.label}</span>
+                  </Label>
+                </div>
+              );
+            })}
+          </RadioGroup>
 
-        <Button
-          className="mt-5 min-h-11 w-full"
-          disabled={!choice}
-          onClick={() => setSent(true)}
-          type="button"
-        >
-          <Send />
-          Send tilbakemelding
-        </Button>
+          <div className="mt-5">
+            <Label className="text-forest-950/80" htmlFor="plan-day">
+              Hvilken dag i planen er du på?
+            </Label>
+            <Input
+              className="mt-1.5 min-h-11 bg-surface font-medium"
+              id="plan-day"
+              max={150}
+              min={0}
+              name="reportedDayNumber"
+              onChange={(event) => setDay(Number(event.target.value))}
+              type="number"
+              value={day}
+            />
+          </div>
+
+          {state.status === "error" && (
+            <p className="mt-4 rounded-md border border-stone-500/30 bg-stone-100 p-3 font-semibold text-sm text-stone-800">
+              {state.message}
+            </p>
+          )}
+
+          <Button
+            className="mt-5 min-h-11 w-full"
+            disabled={isPending || !choice}
+            type="submit"
+          >
+            <Send />
+            {isPending ? "Sender ..." : "Send tilbakemelding"}
+          </Button>
+        </form>
       </CardContent>
     </Card>
   );

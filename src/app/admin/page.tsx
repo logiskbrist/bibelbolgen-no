@@ -18,14 +18,58 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { groupSummary, groups, platformSummary } from "~/lib/mock-data";
+import { latestReportedDay, statusForProgress } from "~/lib/progress-status";
+import { requireAdminUserForPage } from "~/server/auth/page-guards";
+import { listGroupsForAdmin } from "~/server/groups/queries";
+import { getActiveReadingPlan } from "~/server/reading-plan/queries";
 
 export const metadata = {
-  title: "Admin · Bibelbølgen",
+  title: "Adminoversikt · Bibelbølgen",
 };
 
-export default function AdminDashboardPage() {
-  const summary = platformSummary();
+export const dynamic = "force-dynamic";
+
+export default async function AdminoversiktPage() {
+  const admin = await requireAdminUserForPage("/admin");
+  const [groups, readingPlan] = await Promise.all([
+    listGroupsForAdmin(admin.id),
+    getActiveReadingPlan(),
+  ]);
+  const groupSummaries = groups.map((group) => {
+    const memberStatuses = group.memberships.map((membership) =>
+      statusForProgress(
+        latestReportedDay(membership.checkIns),
+        group.progress.currentDay,
+      ),
+    );
+
+    return {
+      behindCount: memberStatuses.filter((status) => status === "behind")
+        .length,
+      currentLabel:
+        group.progress.currentDay > 0
+          ? `Dag ${group.progress.currentDay}`
+          : "Ikke startet",
+      group,
+      memberCount: group._count.memberships,
+      percent: group.progress.percent,
+      status:
+        group.progress.currentDay > 0
+          ? ("on-track" as const)
+          : ("not-started" as const),
+    };
+  });
+  const summary = {
+    behindCount: groupSummaries.reduce(
+      (sum, group) => sum + group.behindCount,
+      0,
+    ),
+    groupCount: groups.length,
+    memberCount: groupSummaries.reduce(
+      (sum, group) => sum + group.memberCount,
+      0,
+    ),
+  };
 
   return (
     <div className="min-h-screen bg-surface text-ink">
@@ -34,18 +78,20 @@ export default function AdminDashboardPage() {
       <main className="bb-container py-10">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="bb-kicker">Global administrasjon</p>
+            <p className="bb-kicker">Administrasjon</p>
             <h1 className="mt-2 font-black font-display text-4xl text-forest-900 leading-tight">
-              Alle grupper
+              Adminoversikt
             </h1>
             <p className="bb-muted mt-2 max-w-xl font-medium">
-              Overvåk fremdriften i hele Bibelbølgen, og hopp inn i en gruppe
-              for å sende meldinger eller se deltakere.
+              Se gruppene du administrerer, følg fremdriften og gå videre til
+              deltakere, invitasjoner og meldinger.
             </p>
           </div>
-          <Button className="min-h-11" type="button">
-            <Plus />
-            Ny gruppe
+          <Button asChild className="min-h-11">
+            <Link href="/admin/grupper/ny">
+              <Plus />
+              Ny gruppe
+            </Link>
           </Button>
         </div>
 
@@ -57,7 +103,11 @@ export default function AdminDashboardPage() {
             label="Deltakere bak planen"
             value={summary.behindCount}
           />
-          <StatCard label="Meldinger sendt" value={summary.messageCount} />
+          <StatCard
+            hint={readingPlan?.title}
+            label="Dager i leseplanen"
+            value={readingPlan?.totalDays ?? 0}
+          />
         </div>
 
         <Card className="mt-8 border-forest-900/10 bg-paper py-0 shadow-soft">
@@ -78,10 +128,13 @@ export default function AdminDashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {[...groups]
-                  .sort((a, b) => b.currentDay - a.currentDay)
-                  .map((group) => {
-                    const s = groupSummary(group);
+                {[...groupSummaries]
+                  .sort(
+                    (a, b) =>
+                      b.group.progress.currentDay - a.group.progress.currentDay,
+                  )
+                  .map((summary) => {
+                    const group = summary.group;
 
                     return (
                       <TableRow key={group.id}>
@@ -93,34 +146,32 @@ export default function AdminDashboardPage() {
                             {group.name}
                           </Link>
                           <p className="text-ink/50 text-xs">
-                            {group.city} · {s.currentLabel}
+                            {group.city ?? "Digital gruppe"} ·{" "}
+                            {summary.currentLabel}
                           </p>
                         </TableCell>
                         <TableCell>
                           <div className="flex min-w-56 items-center gap-3">
                             <div className="flex-1">
-                              <ProgressBar
-                                expected={s.expected}
-                                value={s.percent}
-                              />
+                              <ProgressBar value={summary.percent} />
                             </div>
                             <span className="w-10 text-right font-bold text-forest-900 text-sm">
-                              {s.percent}%
+                              {summary.percent}%
                             </span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <span className="font-semibold text-forest-950/70">
-                            {s.memberCount}
+                            {summary.memberCount}
                           </span>
-                          {s.behindCount > 0 && (
+                          {summary.behindCount > 0 && (
                             <span className="ml-2 font-semibold text-stone-700">
-                              ({s.behindCount} bak)
+                              ({summary.behindCount} bak)
                             </span>
                           )}
                         </TableCell>
                         <TableCell className="px-6 text-right">
-                          <StatusBadge status={s.status} />
+                          <StatusBadge status={summary.status} />
                         </TableCell>
                       </TableRow>
                     );

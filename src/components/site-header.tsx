@@ -1,5 +1,7 @@
+import { LogOut } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { logoutAdminAction } from "~/app/admin/login/actions";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -13,14 +15,17 @@ interface NavLink {
 const publicLinks: NavLink[] = [
   { href: "/grupper", label: "Grupper" },
   { href: "/bli-med", label: "Bli med" },
+  { href: "/start-gruppe", label: "Start gruppe" },
   { href: "/admin", label: "Admin" },
 ];
 
 export function SiteHeader({
   active,
+  showAdminSessionActions = true,
   variant = "public",
 }: {
   active?: string;
+  showAdminSessionActions?: boolean;
   variant?: "public" | "admin";
 }) {
   const isAdmin = variant === "admin";
@@ -97,14 +102,29 @@ export function SiteHeader({
               >
                 <Link href="/">Til nettsiden</Link>
               </Button>
-              <Badge className="ml-2 h-auto gap-2 rounded-md bg-white/10 px-3 py-1.5 text-white/85">
-                <Avatar className="size-6">
-                  <AvatarFallback className="bg-sage-300 font-bold text-forest-950 text-xs">
-                    SE
-                  </AvatarFallback>
-                </Avatar>
-                <span className="font-semibold text-sm">Global admin</span>
-              </Badge>
+              {showAdminSessionActions && (
+                <>
+                  <form action={logoutAdminAction}>
+                    <Button
+                      className="font-semibold text-white/70 hover:bg-white/10 hover:text-white"
+                      size="sm"
+                      type="submit"
+                      variant="ghost"
+                    >
+                      <LogOut />
+                      Logg ut
+                    </Button>
+                  </form>
+                  <Badge className="ml-2 h-auto gap-2 rounded-md bg-white/10 px-3 py-1.5 text-white/85">
+                    <Avatar className="size-6">
+                      <AvatarFallback className="bg-sage-300 font-bold text-forest-950 text-xs">
+                        AD
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-semibold text-sm">Admin</span>
+                  </Badge>
+                </>
+              )}
             </>
           )}
         </nav>

@@ -2,9 +2,19 @@ import { AvatarFallback, Avatar as ShadcnAvatar } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent } from "~/components/ui/card";
 import { Progress } from "~/components/ui/progress";
-import type { ProgressStatus } from "~/lib/mock-data";
-import { statusMeta } from "~/lib/mock-data";
 import { cn } from "~/lib/utils";
+
+export type ProgressStatus = "ahead" | "on-track" | "behind" | "not-started";
+
+const statusMeta: Record<
+  ProgressStatus,
+  { label: string; tone: "ahead" | "ontrack" | "behind" | "neutral" }
+> = {
+  ahead: { label: "Foran planen", tone: "ahead" },
+  "on-track": { label: "I rute", tone: "ontrack" },
+  behind: { label: "Bak planen", tone: "behind" },
+  "not-started": { label: "Ikke startet", tone: "neutral" },
+};
 
 const toneClasses: Record<string, string> = {
   ahead: "border-forest-500/30 bg-sky-100 text-forest-900",

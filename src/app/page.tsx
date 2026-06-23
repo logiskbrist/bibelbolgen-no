@@ -3,13 +3,17 @@ import Link from "next/link";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 
+export const metadata = {
+  title: "Forside · Bibelbølgen",
+};
+
 const readingMarkers = [
   { label: "Leseperiode", value: "5 måneder" },
   { label: "Tekst", value: "Det nye testamentet" },
   { label: "Rytme", value: "Dag for dag" },
 ];
 
-export default function HomePage() {
+export default function ForsidePage() {
   return (
     <main className="min-h-screen overflow-hidden bg-surface text-ink">
       <section className="relative flex min-h-[88svh] flex-col overflow-hidden bg-sage-100">
@@ -42,6 +46,14 @@ export default function HomePage() {
               variant="ghost"
             >
               <Link href="/grupper">Grupper</Link>
+            </Button>
+            <Button
+              asChild
+              className="hidden font-semibold text-forest-950/70 hover:bg-sage-50 hover:text-forest-900 md:inline-flex"
+              size="sm"
+              variant="ghost"
+            >
+              <Link href="/start-gruppe">Start gruppe</Link>
             </Button>
             <Button
               asChild
