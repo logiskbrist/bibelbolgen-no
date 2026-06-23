@@ -237,11 +237,14 @@
       transparent 2px
     );
     background-size: 22px 14px;
-    clip-path: path(
-      "M 0 80 C 180 15 340 15 520 80 S 860 145 1040 80 S 1380 15 1560 80 L 1560 150 L 0 150 Z"
-    );
     height: 150px;
     left: 50%;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 1560 150' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 80C180 15 340 15 520 80S860 145 1040 80S1380 15 1560 80V150H0Z' fill='black'/%3E%3C/svg%3E");
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+    mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 1560 150' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 80C180 15 340 15 520 80S860 145 1040 80S1380 15 1560 80V150H0Z' fill='black'/%3E%3C/svg%3E");
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
     opacity: 0.52;
     position: absolute;
     top: 1rem;
