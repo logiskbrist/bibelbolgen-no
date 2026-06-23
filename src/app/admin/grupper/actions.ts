@@ -51,7 +51,6 @@ export async function createAdminGroupAction(
     const admin = await requireUser(SessionKind.ADMIN);
     const visibility = visibilityValue(formData);
     const group = await createGroup({
-      city: textValue(formData, "city") || undefined,
       description: textValue(formData, "description") || undefined,
       name: textValue(formData, "name"),
       ownerUserId: admin.id,

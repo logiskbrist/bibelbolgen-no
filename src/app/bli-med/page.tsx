@@ -21,9 +21,8 @@ export default async function BliMedIGruppePage({
     listPublicGroups(),
   ]);
   const groupOptions = groups.map((group) => ({
-    slug: group.slug,
     name: group.name,
-    city: group.city ?? "Digital gruppe",
+    slug: group.slug,
   }));
   const defaultGroup = groupOptions.some(
     (group) => group.slug === requestedGroup,

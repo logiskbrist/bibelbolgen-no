@@ -57,7 +57,7 @@ export function FeedbackWidget({
   }
 
   return (
-    <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+    <Card className="border-forest-900/10 bg-paper py-0">
       <CardContent className="p-6">
         <h3 className="font-black font-display text-forest-900 text-xl">
           Hvordan ligger du an?

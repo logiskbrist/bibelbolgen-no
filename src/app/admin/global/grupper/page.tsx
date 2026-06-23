@@ -29,10 +29,7 @@ export default async function GlobaleGrupperPage() {
 
         <div className="mt-8 grid gap-5 lg:grid-cols-2">
           {groups.map((group) => (
-            <Card
-              className="border-forest-900/10 bg-paper py-0 shadow-soft"
-              key={group.id}
-            >
+            <Card className="border-forest-900/10 bg-paper py-0" key={group.id}>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -43,7 +40,6 @@ export default async function GlobaleGrupperPage() {
                       {group.name}
                     </Link>
                     <p className="mt-1 font-semibold text-forest-700 text-sm">
-                      {group.city ?? "Digital gruppe"} ·{" "}
                       {group._count.memberships} deltakere ·{" "}
                       {group._count.admins} admins
                     </p>

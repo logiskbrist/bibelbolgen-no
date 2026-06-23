@@ -27,9 +27,8 @@ export default async function InvitasjonPage({
   const groupOptions = invitedGroup
     ? [
         {
-          slug: invitedGroup.slug,
           name: invitedGroup.name,
-          city: invitedGroup.city ?? "Digital gruppe",
+          slug: invitedGroup.slug,
         },
       ]
     : [];

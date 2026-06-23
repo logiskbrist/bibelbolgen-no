@@ -48,7 +48,7 @@ export function MessageComposer({
     (channel === "SMS" || subject.trim().length > 0);
 
   return (
-    <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+    <Card className="border-forest-900/10 bg-paper py-0">
       <CardHeader className="p-6 pb-0">
         <CardTitle className="font-black font-display text-forest-900 text-xl">
           Send melding til gruppa

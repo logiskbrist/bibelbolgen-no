@@ -12,12 +12,42 @@ interface NavLink {
   label: string;
 }
 
-const publicLinks: NavLink[] = [
+const secondaryPublicLinks: NavLink[] = [
   { href: "/grupper", label: "Grupper" },
-  { href: "/bli-med", label: "Bli med" },
   { href: "/start-gruppe", label: "Start gruppe" },
   { href: "/admin", label: "Admin" },
 ];
+
+function BrandWaves() {
+  return (
+    <Image
+      alt=""
+      className="h-5 w-6 shrink-0 sm:h-6 sm:w-6"
+      height={64}
+      src="/favicon.svg"
+      width={64}
+    />
+  );
+}
+
+function BrandLink({ isAdmin }: { isAdmin: boolean }) {
+  return (
+    <Link
+      className="bb-focus-ring inline-flex items-center gap-2 py-1 font-bold text-forest-900 text-lg sm:text-xl"
+      href={isAdmin ? "/admin" : "/"}
+    >
+      <BrandWaves />
+      <span>
+        Bibelbølgen
+        {isAdmin && (
+          <Badge className="ml-2 bg-sage-100 align-middle font-bold text-[0.6rem] text-forest-900 uppercase">
+            Admin
+          </Badge>
+        )}
+      </span>
+    </Link>
+  );
+}
 
 export function SiteHeader({
   active,
@@ -31,55 +61,24 @@ export function SiteHeader({
   const isAdmin = variant === "admin";
 
   return (
-    <header
-      className={cn(
-        "border-b backdrop-blur",
-        isAdmin
-          ? "border-white/10 bg-forest-950 text-white"
-          : "border-forest-900/10 bg-paper/90",
-      )}
-    >
-      <div className="bb-container flex h-16 items-center justify-between gap-6">
-        <Link
-          className="bb-focus-ring flex items-center gap-3"
-          href={isAdmin ? "/admin" : "/"}
-        >
-          {isAdmin ? (
-            <>
-              <Image
-                alt=""
-                className="size-7"
-                height={28}
-                src="/brand/aa-mark.svg"
-                width={28}
-              />
-              <span className="font-black font-display text-lg tracking-tight">
-                Bibelbølgen
-                <Badge className="ml-2 bg-white/15 align-middle font-bold text-[0.6rem] text-white uppercase">
-                  Admin
-                </Badge>
-              </span>
-            </>
-          ) : (
-            <Image
-              alt="Hjelp meg å lese Bibelen"
-              className="h-8 w-auto"
-              height={49}
-              src="/brand/hjelp-meg-lese-bibelen-wordmark.svg"
-              width={160}
-            />
-          )}
-        </Link>
+    <header className="relative z-10">
+      <div className="bb-container flex items-center justify-between gap-6 py-6">
+        <BrandLink isAdmin={isAdmin} />
 
         <nav className="flex items-center gap-1 text-sm">
-          {(isAdmin ? [] : publicLinks).map((link) => {
+          {(isAdmin ? [] : secondaryPublicLinks).map((link) => {
             const isActive = active === link.href;
+            const responsiveClass =
+              link.href === "/start-gruppe"
+                ? "hidden md:inline-flex"
+                : "hidden sm:inline-flex";
 
             return (
               <Button
                 asChild
                 className={cn(
                   "font-semibold",
+                  responsiveClass,
                   isActive
                     ? "bg-sage-100 text-forest-900 hover:bg-sage-100"
                     : "text-forest-950/70 hover:bg-sage-50 hover:text-forest-900",
@@ -92,11 +91,16 @@ export function SiteHeader({
               </Button>
             );
           })}
+          {!isAdmin && (
+            <Button asChild className="min-h-11" variant="secondary">
+              <Link href="/bli-med">Bli med</Link>
+            </Button>
+          )}
           {isAdmin && (
             <>
               <Button
                 asChild
-                className="font-semibold text-white/70 hover:bg-white/10 hover:text-white"
+                className="font-semibold text-forest-950/70 hover:bg-sage-50 hover:text-forest-900"
                 size="sm"
                 variant="ghost"
               >
@@ -106,7 +110,7 @@ export function SiteHeader({
                 <>
                   <form action={logoutAdminAction}>
                     <Button
-                      className="font-semibold text-white/70 hover:bg-white/10 hover:text-white"
+                      className="font-semibold text-forest-950/70 hover:bg-sage-50 hover:text-forest-900"
                       size="sm"
                       type="submit"
                       variant="ghost"
@@ -115,7 +119,7 @@ export function SiteHeader({
                       Logg ut
                     </Button>
                   </form>
-                  <Badge className="ml-2 h-auto gap-2 rounded-md bg-white/10 px-3 py-1.5 text-white/85">
+                  <Badge className="ml-2 h-auto gap-2 rounded-md bg-sage-100 px-3 py-1.5 text-forest-900">
                     <Avatar className="size-6">
                       <AvatarFallback className="bg-sage-300 font-bold text-forest-950 text-xs">
                         AD

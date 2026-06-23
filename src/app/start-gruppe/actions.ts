@@ -26,7 +26,6 @@ export async function startGroupAction(
   try {
     const contactOptIn = booleanFromForm(formData.get("contactOptIn"));
     const { group, user } = await createGroupWithStarter({
-      city: String(formData.get("city") ?? ""),
       description: String(formData.get("description") ?? ""),
       email: String(formData.get("email") ?? ""),
       emailOptIn: contactOptIn,
@@ -49,6 +48,10 @@ export async function startGroupAction(
           })
         : null;
 
+    await createAuthSession({
+      kind: SessionKind.ADMIN,
+      userId: user.id,
+    });
     await createAuthSession({
       kind: SessionKind.MEMBER_DEVICE,
       userId: user.id,

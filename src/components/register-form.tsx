@@ -15,9 +15,8 @@ import {
 } from "~/components/ui/native-select";
 
 interface GroupOption {
-  slug: string;
   name: string;
-  city: string;
+  slug: string;
 }
 
 type RegisterFormAction = (
@@ -67,7 +66,7 @@ export function RegisterForm({
   }
 
   return (
-    <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+    <Card className="border-forest-900/10 bg-paper py-0">
       <CardContent className="p-6 sm:p-8">
         <form action={formAction} className="space-y-5">
           {inviteSecret && (
@@ -122,7 +121,7 @@ export function RegisterForm({
           </div>
 
           <Field
-            hint="Du kan velge en eksisterende gruppe nær deg."
+            hint="Du kan velge en åpen gruppe som passer deg."
             label="Hvilken gruppe vil du bli med i?"
             name="group"
           >
@@ -139,7 +138,7 @@ export function RegisterForm({
               </NativeSelectOption>
               {groupOptions.map((option) => (
                 <NativeSelectOption key={option.slug} value={option.slug}>
-                  {option.name} - {option.city}
+                  {option.name}
                 </NativeSelectOption>
               ))}
             </NativeSelect>

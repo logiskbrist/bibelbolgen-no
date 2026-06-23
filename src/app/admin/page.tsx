@@ -110,7 +110,7 @@ export default async function AdminoversiktPage() {
           />
         </div>
 
-        <Card className="mt-8 border-forest-900/10 bg-paper py-0 shadow-soft">
+        <Card className="mt-8 border-forest-900/10 bg-paper py-0">
           <CardHeader className="border-forest-900/10 border-b p-6">
             <CardTitle className="font-black font-display text-forest-900 text-lg">
               Grupper
@@ -146,7 +146,6 @@ export default async function AdminoversiktPage() {
                             {group.name}
                           </Link>
                           <p className="text-ink/50 text-xs">
-                            {group.city ?? "Digital gruppe"} ·{" "}
                             {summary.currentLabel}
                           </p>
                         </TableCell>

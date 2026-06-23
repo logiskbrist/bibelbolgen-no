@@ -31,7 +31,7 @@ export function StartGroupForm() {
 
   if (state.status === "success") {
     return (
-      <Card className="border-forest-500/30 bg-sage-100 py-0 shadow-soft">
+      <Card className="border-forest-500/30 bg-sage-100 py-0">
         <CardContent className="p-8">
           <CheckCircle2 className="size-10 text-forest-700" />
           <h2 className="mt-3 font-black font-display text-2xl text-forest-900">
@@ -74,7 +74,7 @@ export function StartGroupForm() {
   }
 
   return (
-    <Card className="border-forest-900/10 bg-paper py-0 shadow-soft">
+    <Card className="border-forest-900/10 bg-paper py-0">
       <CardHeader className="border-forest-900/10 border-b p-6">
         <CardTitle className="font-black font-display text-forest-900 text-xl">
           Gruppeinformasjon
@@ -108,26 +108,15 @@ export function StartGroupForm() {
             />
           </Field>
 
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Sted" name="city">
-              <Input
-                className="min-h-11 bg-surface font-medium"
-                id="city"
-                name="city"
-                placeholder="Oslo"
-                type="text"
-              />
-            </Field>
-            <Field label="Startdato" name="starts-on">
-              <Input
-                className="min-h-11 bg-surface font-medium"
-                id="starts-on"
-                name="startsOn"
-                required
-                type="date"
-              />
-            </Field>
-          </div>
+          <Field label="Startdato" name="starts-on">
+            <Input
+              className="min-h-11 bg-surface font-medium"
+              id="starts-on"
+              name="startsOn"
+              required
+              type="date"
+            />
+          </Field>
 
           <Field label="Tilgang" name="visibility">
             <NativeSelect className="w-full" id="visibility" name="visibility">

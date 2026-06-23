@@ -59,7 +59,7 @@ export default async function GlobalAdminPage() {
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           {globalAdminLinks.map((link) => (
             <Card
-              className="border-forest-900/10 bg-paper py-0 shadow-soft"
+              className="border-forest-900/10 bg-paper py-0"
               key={link.href}
             >
               <CardContent className="p-5">

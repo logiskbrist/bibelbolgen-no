@@ -52,7 +52,7 @@ export default async function GruppedeltakerePage({
           />
         </div>
 
-        <Card className="mt-8 border-forest-900/10 bg-paper py-0 shadow-soft">
+        <Card className="mt-8 border-forest-900/10 bg-paper py-0">
           <CardContent className="p-0">
             <ul className="divide-y divide-forest-900/10">
               {group.memberships.map((membership) => {
