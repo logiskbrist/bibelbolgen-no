@@ -11,7 +11,7 @@ export function BookOrderForm() {
   const isShipping = delivery === "shipping";
 
   return (
-    <form className="rounded-card bg-paper/72 p-6 sm:p-8">
+    <form className="rounded-card bg-paper/80 p-6 sm:p-8">
       <p className="bb-kicker">Bestill boka</p>
       <h2 className="mt-3 text-balance font-black font-display text-3xl text-forest-900 leading-none sm:text-4xl">
         Hjelp meg å lese Bibelen
@@ -78,7 +78,12 @@ export function BookOrderForm() {
           </p>
           <p className="bb-muted text-sm">Pakkeavgift kommer i tillegg.</p>
         </div>
-        <Button type="button">Bestill boka</Button>
+        <div className="flex flex-col items-end gap-2 text-right">
+          <Button disabled type="button">
+            Bestill boka
+          </Button>
+          <p className="bb-muted text-sm">Bestilling åpner snart.</p>
+        </div>
       </div>
     </form>
   );

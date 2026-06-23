@@ -160,7 +160,7 @@
     margin: 0;
     background: linear-gradient(
       180deg,
-      var(--color-white),
+      var(--color-surface) 0%,
       var(--color-sage-50)
     );
     color: var(--color-ink);

@@ -83,14 +83,14 @@ export default async function ForsidePage() {
         />
         <div className="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-sage-50/72 to-sage-50/92" />
 
-        <div className="bb-container relative z-10 grid gap-10 lg:grid-cols-[1fr_0.95fr] lg:items-center">
-          <div>
+        <div className="bb-container relative z-10 grid items-stretch gap-10 lg:grid-cols-[1fr_0.95fr]">
+          <div className="relative min-h-80 overflow-hidden rounded-card lg:min-h-80">
             <Image
               alt="To eksemplarer av Hjelp meg å lese Bibelen"
-              className="w-full rounded-card object-cover"
-              height={2000}
+              className="object-cover object-center"
+              fill
+              sizes="(min-width: 1024px) 52vw, calc(100vw - 2rem)"
               src="/brand/book-stack.png"
-              width={3000}
             />
           </div>
           <BookOrderForm />
