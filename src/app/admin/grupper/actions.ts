@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
-import { addGroupAdmin } from "~/server/admin/actions";
-import { requireUser } from "~/server/auth/permissions";
-import { createGroup } from "~/server/groups/actions";
+import { setGroupParticipantRole } from "~/server/admin/actions";
+import { canAccessAdminPages, requireUser } from "~/server/auth/permissions";
+import { createGroup, deleteGroup } from "~/server/groups/actions";
 import { createGroupInvite } from "~/server/groups/invites";
 import { sendGroupMessage } from "~/server/messaging/dispatch";
 import {
@@ -36,6 +37,7 @@ function visibilityValue(formData: FormData) {
 }
 
 const groupIdSchema = z.string().trim().min(1);
+const participantRoleSchema = z.enum(["MEMBER", "ADMIN", "OWNER"]);
 
 export async function createAdminGroupAction(
   _prevState: AdminGroupActionState,
@@ -95,9 +97,6 @@ export async function sendAdminGroupMessageAction(
     });
 
     revalidatePath(`/admin/grupper/${textValue(formData, "groupSlug")}`);
-    revalidatePath(
-      `/admin/grupper/${textValue(formData, "groupSlug")}/meldinger`,
-    );
 
     return {
       message: `Meldingen er sendt til ${dispatch.recipientCount} mottakere. Selve meldingen ble ikke lagret.`,
@@ -108,42 +107,6 @@ export async function sendAdminGroupMessageAction(
       ...initialErrorState,
       message:
         error instanceof Error ? error.message : "Kunne ikke sende meldingen.",
-    };
-  }
-}
-
-export async function addGroupAdminAction(
-  _prevState: AdminGroupActionState,
-  formData: FormData,
-): Promise<AdminGroupActionState> {
-  const groupSlug = textValue(formData, "groupSlug");
-
-  try {
-    const actor = await requireUser(SessionKind.ADMIN);
-    const groupId = groupIdSchema.parse(textValue(formData, "groupId"));
-
-    await addGroupAdmin({
-      actorUserId: actor.id,
-      groupId,
-      user: {
-        email: textValue(formData, "email"),
-        name: textValue(formData, "name"),
-        phoneNumber: textValue(formData, "phoneNumber"),
-      },
-    });
-
-    revalidatePath(`/admin/grupper/${groupSlug}`);
-    revalidatePath(`/admin/grupper/${groupSlug}/admins`);
-
-    return {
-      message: "Admin er lagt til.",
-      ok: true,
-    };
-  } catch (error) {
-    return {
-      ...initialErrorState,
-      message:
-        error instanceof Error ? error.message : "Kunne ikke legge til admin.",
     };
   }
 }
@@ -176,5 +139,48 @@ export async function createInviteAction(
       message:
         error instanceof Error ? error.message : "Kunne ikke lage invitasjon.",
     };
+  }
+}
+
+export async function deleteAdminGroupAction(formData: FormData) {
+  const admin = await requireUser(SessionKind.ADMIN);
+  const groupId = groupIdSchema.parse(textValue(formData, "groupId"));
+
+  await deleteGroup({
+    adminUserId: admin.id,
+    groupId,
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/bli-med");
+  revalidatePath("/grupper");
+}
+
+export async function setGroupParticipantRoleAction(formData: FormData) {
+  const admin = await requireUser(SessionKind.ADMIN);
+  const groupId = groupIdSchema.parse(textValue(formData, "groupId"));
+  const groupSlug = textValue(formData, "groupSlug");
+  const role = participantRoleSchema.parse(textValue(formData, "role"));
+  const userId = groupIdSchema.parse(textValue(formData, "userId"));
+
+  await setGroupParticipantRole({
+    actorUserId: admin.id,
+    groupId,
+    role,
+    userId,
+  });
+
+  revalidatePath(`/admin/grupper/${groupSlug}`);
+
+  if (
+    role === "MEMBER" &&
+    userId === admin.id &&
+    !(await canAccessAdminPages(admin.id))
+  ) {
+    redirect("/");
+  }
+
+  if (role === "MEMBER" && userId === admin.id) {
+    redirect("/admin");
   }
 }

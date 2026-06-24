@@ -2,7 +2,12 @@ import "server-only";
 
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
-import { requireGroupAdmin } from "~/server/auth/permissions";
+import {
+  AuthorizationError,
+  getGroupAdminRole,
+  isGlobalAdmin,
+  requireGroupAdmin,
+} from "~/server/auth/permissions";
 import { getDb } from "~/server/db";
 import { requireActiveReadingPlan } from "~/server/reading-plan/queries";
 import {
@@ -170,6 +175,29 @@ export async function updateGroupBasics({
 
   return getDb().group.update({
     data,
+    where: { id: groupId },
+  });
+}
+
+export async function deleteGroup({
+  adminUserId,
+  groupId,
+}: {
+  adminUserId: string;
+  groupId: string;
+}) {
+  await requireGroupAdmin(groupId, adminUserId);
+
+  const [hasGlobalAccess, adminRole] = await Promise.all([
+    isGlobalAdmin(adminUserId),
+    getGroupAdminRole(groupId, adminUserId),
+  ]);
+
+  if (!hasGlobalAccess && adminRole !== GroupAdminRole.OWNER) {
+    throw new AuthorizationError("Bare eier kan slette gruppa.");
+  }
+
+  return getDb().group.delete({
     where: { id: groupId },
   });
 }

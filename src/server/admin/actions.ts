@@ -3,102 +3,122 @@ import "server-only";
 import { z } from "zod";
 import { requireGroupAdmin } from "~/server/auth/permissions";
 import { getDb } from "~/server/db";
-import { GroupAdminRole } from "../../../generated/prisma/client";
+import {
+  GroupAdminRole,
+  MembershipStatus,
+} from "../../../generated/prisma/client";
 
-const adminUserInputSchema = z.object({
-  email: z.string().trim().email().max(320),
-  name: z.string().trim().min(2).max(160),
-  phoneNumber: z.string().trim().min(6).max(32),
-});
+const participantRoleSchema = z.enum(["MEMBER", "ADMIN", "OWNER"]);
 
-function normalizePhoneNumber(phoneNumber: string) {
-  return phoneNumber.replace(/[^\d+]/g, "");
-}
-
-async function upsertUserForAdmin(input: z.infer<typeof adminUserInputSchema>) {
-  return getDb().user.upsert({
-    create: {
-      email: input.email,
-      name: input.name,
-      phoneNumber: normalizePhoneNumber(input.phoneNumber),
-    },
-    update: {
-      email: input.email,
-      name: input.name,
-    },
-    where: {
-      phoneNumber: normalizePhoneNumber(input.phoneNumber),
-    },
-  });
-}
-
-export async function addGroupAdmin({
+export async function setGroupParticipantRole({
   actorUserId,
   groupId,
-  role = GroupAdminRole.ADMIN,
-  user,
+  role,
   userId,
 }: {
   actorUserId: string;
   groupId: string;
-  role?: GroupAdminRole;
-  user?: z.input<typeof adminUserInputSchema>;
-  userId?: string;
-}) {
-  await requireGroupAdmin(groupId, actorUserId);
-
-  const adminUserId =
-    userId ??
-    (user
-      ? (await upsertUserForAdmin(adminUserInputSchema.parse(user))).id
-      : null);
-
-  if (!adminUserId) {
-    throw new Error("Du må velge en bruker eller oppgi ny admininfo.");
-  }
-
-  return getDb().groupAdmin.upsert({
-    create: {
-      createdByUserId: actorUserId,
-      groupId,
-      role,
-      userId: adminUserId,
-    },
-    update: {
-      role,
-    },
-    where: {
-      groupId_userId: {
-        groupId,
-        userId: adminUserId,
-      },
-    },
-  });
-}
-
-export async function removeGroupAdmin({
-  actorUserId,
-  groupId,
-  userId,
-}: {
-  actorUserId: string;
-  groupId: string;
+  role: z.input<typeof participantRoleSchema>;
   userId: string;
 }) {
   await requireGroupAdmin(groupId, actorUserId);
 
-  const adminCount = await getDb().groupAdmin.count({ where: { groupId } });
+  const nextRole = participantRoleSchema.parse(role);
+  const db = getDb();
+  const [targetAssignment, targetMembership] = await Promise.all([
+    db.groupAdmin.findUnique({
+      where: {
+        groupId_userId: {
+          groupId,
+          userId,
+        },
+      },
+    }),
+    db.groupMembership.findUnique({
+      select: { id: true },
+      where: {
+        groupId_userId: {
+          groupId,
+          userId,
+        },
+        status: MembershipStatus.ACTIVE,
+      },
+    }),
+  ]);
 
-  if (adminCount <= 1) {
-    throw new Error("Gruppa må ha minst én admin.");
+  if (targetAssignment?.role === GroupAdminRole.OWNER) {
+    throw new Error("Eier kan ikke endres til deltaker eller admin.");
   }
 
-  return getDb().groupAdmin.delete({
+  if ((nextRole === "ADMIN" || nextRole === "OWNER") && !targetMembership) {
+    throw new Error("Bare aktive deltakere kan gjøres til admin eller eier.");
+  }
+
+  if (nextRole === "MEMBER") {
+    if (!targetAssignment) {
+      return null;
+    }
+
+    return db.groupAdmin.delete({
+      where: {
+        groupId_userId: {
+          groupId,
+          userId,
+        },
+      },
+    });
+  }
+
+  if (nextRole === "ADMIN") {
+    return db.groupAdmin.upsert({
+      create: {
+        createdByUserId: actorUserId,
+        groupId,
+        role: GroupAdminRole.ADMIN,
+        userId,
+      },
+      update: {
+        role: GroupAdminRole.ADMIN,
+      },
+      where: {
+        groupId_userId: {
+          groupId,
+          userId,
+        },
+      },
+    });
+  }
+
+  const actorAssignment = await db.groupAdmin.findUnique({
     where: {
       groupId_userId: {
         groupId,
-        userId,
+        userId: actorUserId,
       },
     },
   });
+
+  if (actorAssignment?.role !== GroupAdminRole.OWNER) {
+    throw new Error("Bare eier kan gi eierrollen videre.");
+  }
+
+  if (targetAssignment?.role !== GroupAdminRole.ADMIN) {
+    throw new Error("Bare en eksisterende admin kan gjøres til eier.");
+  }
+
+  return db.$transaction([
+    db.groupAdmin.updateMany({
+      data: { role: GroupAdminRole.ADMIN },
+      where: { groupId, role: GroupAdminRole.OWNER },
+    }),
+    db.groupAdmin.update({
+      data: { role: GroupAdminRole.OWNER },
+      where: {
+        groupId_userId: {
+          groupId,
+          userId,
+        },
+      },
+    }),
+  ]);
 }

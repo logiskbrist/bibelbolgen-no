@@ -25,19 +25,47 @@ export async function sendGroupMessage({
 
   await requireGroupAdmin(input.groupId, adminUserId);
 
-  const memberships = await getDb().groupMembership.findMany({
-    include: { user: true },
+  const group = await getDb().group.findUnique({
+    include: {
+      admins: {
+        include: { user: true },
+      },
+      memberships: {
+        include: { user: true },
+        where: {
+          status: MembershipStatus.ACTIVE,
+        },
+      },
+    },
     where: {
-      groupId: input.groupId,
-      status: MembershipStatus.ACTIVE,
+      id: input.groupId,
     },
   });
-  const recipients = memberships
-    .filter((membership) => membership.smsOptIn)
-    .map((membership) => ({
+
+  if (!group) {
+    throw new Error("Fant ikke gruppa.");
+  }
+
+  const recipientsByPhoneNumber = new Map<
+    string,
+    { name: string; phoneNumber: string }
+  >();
+
+  for (const membership of group.memberships) {
+    recipientsByPhoneNumber.set(membership.user.phoneNumber, {
       name: membership.user.name,
       phoneNumber: membership.user.phoneNumber,
-    }));
+    });
+  }
+
+  for (const admin of group.admins) {
+    recipientsByPhoneNumber.set(admin.user.phoneNumber, {
+      name: admin.user.name,
+      phoneNumber: admin.user.phoneNumber,
+    });
+  }
+
+  const recipients = [...recipientsByPhoneNumber.values()];
   const providerBatchId = await sendSmsBatch({
     body: input.body,
     recipients,

@@ -262,10 +262,29 @@ export async function getAdminGroupBySlug(slug: string, adminUserId: string) {
   return withComputedProgress(group);
 }
 
-export async function listGroupsForAdmin(adminUserId: string) {
+export async function listGroupsForAdmin(
+  adminUserId: string,
+  options: { search?: string } = {},
+) {
   const isGlobal = await isGlobalAdmin(adminUserId);
+  const search = options.search?.trim();
   const where = isGlobal
-    ? {}
+    ? search
+      ? {
+          OR: [
+            { name: { contains: search } },
+            {
+              admins: {
+                some: {
+                  user: {
+                    name: { contains: search },
+                  },
+                },
+              },
+            },
+          ],
+        }
+      : {}
     : {
         admins: {
           some: {
@@ -279,6 +298,13 @@ export async function listGroupsForAdmin(adminUserId: string) {
       _count: {
         select: {
           memberships: { where: { status: MembershipStatus.ACTIVE } },
+        },
+      },
+      admins: {
+        include: {
+          user: {
+            select: { name: true },
+          },
         },
       },
       memberships: {

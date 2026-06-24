@@ -1,8 +1,8 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
-import { SessionKind, SystemRole } from "../../../generated/prisma/client";
-import { getCurrentUser } from "./permissions";
+import { SessionKind } from "../../../generated/prisma/client";
+import { canAccessAdminPages, getCurrentUser } from "./permissions";
 
 export async function requireAdminUserForPage(nextPath = "/admin") {
   const user = await getCurrentUser(SessionKind.ADMIN);
@@ -11,14 +11,8 @@ export async function requireAdminUserForPage(nextPath = "/admin") {
     redirect(`/admin/login?next=${encodeURIComponent(nextPath)}`);
   }
 
-  return user;
-}
-
-export async function requireGlobalAdminForPage(nextPath = "/admin/global") {
-  const user = await requireAdminUserForPage(nextPath);
-
-  if (user.systemRole !== SystemRole.GLOBAL_ADMIN) {
-    redirect("/admin");
+  if (!(await canAccessAdminPages(user.id))) {
+    redirect(`/admin/login?next=${encodeURIComponent(nextPath)}`);
   }
 
   return user;

@@ -50,7 +50,7 @@ export function MessageComposer({
           Send melding til gruppa
         </CardTitle>
         <CardDescription>
-          Når til {recipientCount} deltakere på en gang.
+          Når til {recipientCount} personer på en gang.
         </CardDescription>
       </CardHeader>
       <CardContent className="p-6 pt-2">
@@ -80,7 +80,7 @@ export function MessageComposer({
             <span>
               {body.length}/{maxSms} tegn
             </span>
-            <span>Sendes til {recipientCount} deltakere</span>
+            <span>Sendes til {recipientCount} personer</span>
           </div>
 
           {state.message && (
