@@ -1,20 +1,13 @@
-import {
-  ExternalLink,
-  LinkIcon,
-  MessageSquare,
-  Plus,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
+import { ExternalLink, Plus } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { GroupMemberRoleControl } from "~/components/group-member-role-control";
 import { MessageComposer } from "~/components/message-composer";
 import { SiteHeader } from "~/components/site-header";
-import { Avatar, ProgressBar, StatCard, StatusBadge } from "~/components/ui";
+import { Avatar, ProgressBar } from "~/components/ui";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { latestReportedDay, statusForProgress } from "~/lib/progress-status";
 import { requireAdminUserForPage } from "~/server/auth/page-guards";
 import { getAdminGroupBySlug } from "~/server/groups/queries";
 import { GroupAdminRole } from "../../../../../generated/prisma/client";
@@ -37,32 +30,22 @@ export default async function GruppeadminPage({
   const adminRolesByUserId = new Map(
     group.admins.map((assignment) => [assignment.userId, assignment.role]),
   );
-  const memberRows = group.memberships.map((membership) => {
-    const reportedDay = latestReportedDay(membership.checkIns);
+  const canTransferOwnership =
+    adminRolesByUserId.get(admin.id) === GroupAdminRole.OWNER;
+  const memberships = [...group.memberships].sort((first, second) => {
+    const firstIsOwner =
+      adminRolesByUserId.get(first.userId) === GroupAdminRole.OWNER;
+    const secondIsOwner =
+      adminRolesByUserId.get(second.userId) === GroupAdminRole.OWNER;
 
-    return {
-      isAdmin: adminRolesByUserId.has(membership.userId),
-      membership,
-      reportedDay,
-      status: statusForProgress(reportedDay, group.progress.currentDay),
-    };
+    return Number(secondIsOwner) - Number(firstIsOwner);
   });
-  const behindCount = memberRows.filter(
-    (member) => member.status === "behind",
-  ).length;
-  const onTrackCount = memberRows.filter(
-    (member) => member.status === "on-track" || member.status === "ahead",
-  ).length;
-  const smsRecipientCount = group.memberships.filter(
-    (membership) => membership.smsOptIn,
-  ).length;
-  const emailRecipientCount = group.memberships.filter(
-    (membership) => membership.emailOptIn,
-  ).length;
-  const groupStatus =
-    group.progress.currentDay > 0
-      ? ("on-track" as const)
-      : ("not-started" as const);
+  const smsRecipientPhoneNumbers = new Set([
+    ...group.memberships.map((membership) => membership.user.phoneNumber),
+    ...group.admins.map((assignment) => assignment.user.phoneNumber),
+  ]);
+  const smsRecipientCount = smsRecipientPhoneNumbers.size;
+  const averageMemberDay = group.memberProgress?.averageDay;
 
   return (
     <div className="min-h-screen bg-surface text-ink">
@@ -78,13 +61,12 @@ export default async function GruppeadminPage({
           <Link href="/admin">← Alle grupper</Link>
         </Button>
 
-        <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="mt-5 mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="flex items-center gap-3">
               <h1 className="font-black font-display text-4xl text-forest-900 leading-tight">
                 {group.name}
               </h1>
-              <StatusBadge status={groupStatus} />
             </div>
             <p className="bb-muted mt-2 font-medium">
               {group.visibility} · startet{" "}
@@ -102,19 +84,26 @@ export default async function GruppeadminPage({
           </Button>
         </div>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-4">
-          <StatCard label="Deltakere" value={group.memberships.length} />
-          <StatCard label="I rute" value={onTrackCount} />
-          <StatCard label="Bak planen" value={behindCount} />
-          <StatCard
-            hint={`dag ${group.progress.currentDay} av ${group.progress.totalDays}`}
-            label="Fremdrift"
-            value={`${group.progress.percent}%`}
-          />
+        <div className="mt-6 flex items-end justify-between gap-6 border-gray-300 border-t pt-2">
+          <div>
+            <p className="mt-2 font-black font-display text-3xl text-forest-900">
+              Dag {group.progress.currentDay} av {group.progress.totalDays}
+            </p>
+            <p className="text-ink/50 text-sm">Gruppas fremdrift</p>
+          </div>
+          <p className="font-black text-5xl text-forest-900 leading-none">
+            {group.progress.percent}%
+          </p>
         </div>
 
         <div className="mt-6">
           <ProgressBar value={group.progress.percent} />
+          {typeof averageMemberDay === "number" && (
+            <p className="mt-2 text-ink/50 text-xs">
+              Snitt innmeldt: dag {averageMemberDay.toLocaleString("nb-NO")} ·{" "}
+              {group.memberProgress?.reportingMemberCount} rapportert
+            </p>
+          )}
         </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-start">
@@ -137,81 +126,50 @@ export default async function GruppeadminPage({
             </CardHeader>
             <CardContent className="p-0">
               <ul className="divide-y divide-forest-900/10">
-                {memberRows.map(
-                  ({ isAdmin, membership, reportedDay, status }) => {
-                    const adminRole = adminRolesByUserId.get(membership.userId);
+                {memberships.map((membership) => {
+                  const adminRole = adminRolesByUserId.get(membership.userId);
+                  const currentRole = adminRole ?? "MEMBER";
 
-                    return (
-                      <li
-                        className="flex flex-wrap items-center gap-3 px-6 py-4"
-                        key={membership.id}
-                      >
-                        <Avatar name={membership.user.name} />
-                        <div className="min-w-0 flex-1">
-                          <p className="font-bold text-forest-950">
-                            {membership.user.name}
-                            {isAdmin && (
-                              <Badge className="ml-2 bg-forest-900 font-bold text-[0.6rem] text-white uppercase">
-                                {adminRole === GroupAdminRole.OWNER
-                                  ? "Eier"
-                                  : "Leder"}
-                              </Badge>
-                            )}
-                          </p>
-                          <p className="text-ink/55 text-xs">
-                            {membership.user.phoneNumber} ·{" "}
-                            {membership.user.email}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <StatusBadge status={status} />
-                          <p className="mt-1 text-ink/45 text-xs">
-                            {reportedDay
-                              ? `Sist sett dag ${reportedDay}`
-                              : "Ingen tilbakemelding"}
-                          </p>
-                        </div>
-                      </li>
-                    );
-                  },
-                )}
+                  return (
+                    <li
+                      className="flex flex-wrap items-center gap-3 px-6 py-4"
+                      key={membership.id}
+                    >
+                      <Avatar name={membership.user.name} />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-forest-950">
+                          {membership.user.name}
+                          {adminRole === GroupAdminRole.OWNER && (
+                            <Badge className="ml-2 bg-forest-900 font-bold text-[0.6rem] text-white uppercase">
+                              Eier
+                            </Badge>
+                          )}
+                        </p>
+                        <p className="text-ink/55 text-xs">
+                          {membership.user.phoneNumber} ·{" "}
+                          {membership.user.email}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <GroupMemberRoleControl
+                          canTransferOwnership={canTransferOwnership}
+                          currentRole={currentRole}
+                          groupId={group.id}
+                          groupSlug={group.slug}
+                          isCurrentAdmin={membership.userId === admin.id}
+                          userId={membership.userId}
+                          userName={membership.user.name}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             </CardContent>
           </Card>
 
           <div className="space-y-6 lg:sticky lg:top-6">
-            <Card className="border-forest-900/10 bg-paper py-0">
-              <CardHeader className="p-6 pb-0">
-                <CardTitle className="font-black font-display text-forest-900 text-lg">
-                  Gruppeverktøy
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3 p-6 pt-4">
-                <ToolLink
-                  href={`/admin/grupper/${group.slug}/deltakere`}
-                  icon={<Users className="size-4" />}
-                  label="Deltakere"
-                />
-                <ToolLink
-                  href={`/admin/grupper/${group.slug}/meldinger`}
-                  icon={<MessageSquare className="size-4" />}
-                  label="Send SMS"
-                />
-                <ToolLink
-                  href={`/admin/grupper/${group.slug}/admins`}
-                  icon={<ShieldCheck className="size-4" />}
-                  label="Administratorer"
-                />
-                <ToolLink
-                  href={`/admin/grupper/${group.slug}/invitasjon`}
-                  icon={<LinkIcon className="size-4" />}
-                  label="Invitasjonslenke"
-                />
-              </CardContent>
-            </Card>
-
             <MessageComposer
-              emailRecipientCount={emailRecipientCount}
               groupId={group.id}
               groupSlug={group.slug}
               smsRecipientCount={smsRecipientCount}
@@ -220,28 +178,5 @@ export default async function GruppeadminPage({
         </div>
       </main>
     </div>
-  );
-}
-
-function ToolLink({
-  href,
-  icon,
-  label,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <Button
-      asChild
-      className="justify-start border-forest-900/15 text-forest-900 hover:bg-sage-50"
-      variant="outline"
-    >
-      <Link href={href}>
-        {icon}
-        {label}
-      </Link>
-    </Button>
   );
 }

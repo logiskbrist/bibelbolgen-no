@@ -1,4 +1,13 @@
+import "server-only";
+
 import type { ProgressStatus } from "~/components/ui";
+import { calculateLatestMemberDay } from "~/server/reading-plan/progress";
+
+type ReportedCheckIn = {
+  checkedInAt: Date;
+  forDate: Date | null;
+  reportedDayNumber: number | null;
+};
 
 export function statusForProgress(
   currentDay: number | null | undefined,
@@ -25,4 +34,20 @@ export function latestReportedDay(
   checkIns: { reportedDayNumber: number | null }[],
 ) {
   return checkIns[0]?.reportedDayNumber ?? null;
+}
+
+export function latestComputedMemberDay({
+  checkIns,
+  timeZone,
+  totalDays,
+}: {
+  checkIns: ReportedCheckIn[];
+  timeZone: string;
+  totalDays: number;
+}) {
+  return calculateLatestMemberDay({
+    checkIns,
+    timeZone,
+    totalDays,
+  });
 }

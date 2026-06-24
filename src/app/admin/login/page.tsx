@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { AdminLoginForm } from "~/components/admin-login-form";
 import { SiteHeader } from "~/components/site-header";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { getCurrentUser } from "~/server/auth/permissions";
+import { canAccessAdminPages, getCurrentUser } from "~/server/auth/permissions";
 import { SessionKind } from "../../../../generated/prisma/client";
 
 export const metadata = {
@@ -30,7 +30,7 @@ export default async function AdminLoginPage({
   const nextPath = safeNextPath(next);
   const admin = await getCurrentUser(SessionKind.ADMIN);
 
-  if (admin) {
+  if (admin && (await canAccessAdminPages(admin.id))) {
     redirect(nextPath);
   }
 

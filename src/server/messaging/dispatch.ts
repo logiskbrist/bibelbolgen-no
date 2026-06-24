@@ -7,14 +7,12 @@ import {
   MembershipStatus,
   MessageChannel,
 } from "../../../generated/prisma/client";
-import { sendEmailBatch } from "./email";
 import { sendSmsBatch } from "./sms";
 
 const dispatchInputSchema = z.object({
-  body: z.string().trim().min(1).max(5000),
-  channel: z.enum(MessageChannel),
+  body: z.string().trim().min(1).max(160),
+  channel: z.literal(MessageChannel.SMS),
   groupId: z.string().min(1),
-  subject: z.string().trim().max(200).optional(),
 });
 
 export async function sendGroupMessage({
@@ -27,45 +25,58 @@ export async function sendGroupMessage({
 
   await requireGroupAdmin(input.groupId, adminUserId);
 
-  const memberships = await getDb().groupMembership.findMany({
-    include: { user: true },
+  const group = await getDb().group.findUnique({
+    include: {
+      admins: {
+        include: { user: true },
+      },
+      memberships: {
+        include: { user: true },
+        where: {
+          status: MembershipStatus.ACTIVE,
+        },
+      },
+    },
     where: {
-      groupId: input.groupId,
-      status: MembershipStatus.ACTIVE,
+      id: input.groupId,
     },
   });
-  const providerBatchId =
-    input.channel === MessageChannel.SMS
-      ? await sendSmsBatch({
-          body: input.body,
-          recipients: memberships
-            .filter((membership) => membership.smsOptIn)
-            .map((membership) => ({
-              name: membership.user.name,
-              phoneNumber: membership.user.phoneNumber,
-            })),
-        })
-      : await sendEmailBatch({
-          body: input.body,
-          recipients: memberships
-            .filter((membership) => membership.emailOptIn)
-            .map((membership) => ({
-              email: membership.user.email,
-              name: membership.user.name,
-            })),
-          subject: input.subject ?? "Oppdatering fra Bibelbølgen",
-        });
-  const recipientCount =
-    input.channel === MessageChannel.SMS
-      ? memberships.filter((membership) => membership.smsOptIn).length
-      : memberships.filter((membership) => membership.emailOptIn).length;
+
+  if (!group) {
+    throw new Error("Fant ikke gruppa.");
+  }
+
+  const recipientsByPhoneNumber = new Map<
+    string,
+    { name: string; phoneNumber: string }
+  >();
+
+  for (const membership of group.memberships) {
+    recipientsByPhoneNumber.set(membership.user.phoneNumber, {
+      name: membership.user.name,
+      phoneNumber: membership.user.phoneNumber,
+    });
+  }
+
+  for (const admin of group.admins) {
+    recipientsByPhoneNumber.set(admin.user.phoneNumber, {
+      name: admin.user.name,
+      phoneNumber: admin.user.phoneNumber,
+    });
+  }
+
+  const recipients = [...recipientsByPhoneNumber.values()];
+  const providerBatchId = await sendSmsBatch({
+    body: input.body,
+    recipients,
+  });
 
   return getDb().messageDispatch.create({
     data: {
       channel: input.channel,
       groupId: input.groupId,
       providerBatchId,
-      recipientCount,
+      recipientCount: recipients.length,
       sentByUserId: adminUserId,
     },
   });

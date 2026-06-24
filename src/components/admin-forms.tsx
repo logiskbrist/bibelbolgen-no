@@ -1,11 +1,10 @@
 "use client";
 
-import { CheckCircle2, KeyRound, Plus, UserPlus } from "lucide-react";
+import { CheckCircle2, KeyRound, Plus } from "lucide-react";
 import Link from "next/link";
 import { useActionState } from "react";
 import {
   type AdminGroupActionState,
-  addGroupAdminAction,
   createAdminGroupAction,
   createInviteAction,
 } from "~/app/admin/grupper/actions";
@@ -129,77 +128,6 @@ export function AdminCreateGroupForm() {
       <Button className="min-h-11" disabled={isPending} type="submit">
         <Plus />
         {isPending ? "Oppretter ..." : "Opprett gruppe"}
-      </Button>
-    </form>
-  );
-}
-
-export function AddGroupAdminForm({
-  groupId,
-  groupSlug,
-}: {
-  groupId: string;
-  groupSlug: string;
-}) {
-  const [state, formAction, isPending] = useActionState<
-    AdminGroupActionState,
-    FormData
-  >(addGroupAdminAction, {});
-
-  return (
-    <form action={formAction} className="grid gap-5">
-      <input name="groupId" type="hidden" value={groupId} />
-      <input name="groupSlug" type="hidden" value={groupSlug} />
-
-      <ActionFeedback state={state} />
-
-      <div>
-        <Label className="text-forest-950/80" htmlFor="admin-name">
-          Navn
-        </Label>
-        <Input
-          autoComplete="name"
-          className="mt-1.5 min-h-11 bg-surface font-medium"
-          id="admin-name"
-          name="name"
-          required
-          type="text"
-        />
-      </div>
-
-      <div>
-        <Label className="text-forest-950/80" htmlFor="admin-phone">
-          Telefonnummer
-        </Label>
-        <Input
-          autoComplete="tel"
-          className="mt-1.5 min-h-11 bg-surface font-medium"
-          id="admin-phone"
-          name="phoneNumber"
-          placeholder="+47 900 00 000"
-          required
-          type="tel"
-        />
-      </div>
-
-      <div>
-        <Label className="text-forest-950/80" htmlFor="admin-email">
-          E-post
-        </Label>
-        <Input
-          autoComplete="email"
-          className="mt-1.5 min-h-11 bg-surface font-medium"
-          id="admin-email"
-          name="email"
-          placeholder="navn@example.no"
-          required
-          type="email"
-        />
-      </div>
-
-      <Button className="min-h-11" disabled={isPending} type="submit">
-        <UserPlus />
-        {isPending ? "Legger til ..." : "Legg til admin"}
       </Button>
     </form>
   );

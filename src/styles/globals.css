@@ -255,7 +255,7 @@
   .bb-person-dot {
     align-items: center;
     background: var(--dot, var(--color-forest-900));
-    border: 3px solid var(--color-paper);
+    border: 3px solid var(--color-sage-100);
     border-radius: 999px;
     display: flex;
     height: var(--size);

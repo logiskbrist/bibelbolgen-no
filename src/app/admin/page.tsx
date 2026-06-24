@@ -1,7 +1,9 @@
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import Link from "next/link";
+import { DeleteGroupButton } from "~/components/delete-group-button";
 import { SiteHeader } from "~/components/site-header";
-import { ProgressBar, StatCard, StatusBadge } from "~/components/ui";
+import { ProgressBar } from "~/components/ui";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -10,6 +12,12 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "~/components/ui/native-select";
 import {
   Table,
   TableBody,
@@ -18,10 +26,13 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { latestReportedDay, statusForProgress } from "~/lib/progress-status";
+import {
+  latestComputedMemberDay,
+  statusForProgress,
+} from "~/lib/progress-status";
 import { requireAdminUserForPage } from "~/server/auth/page-guards";
 import { listGroupsForAdmin } from "~/server/groups/queries";
-import { getActiveReadingPlan } from "~/server/reading-plan/queries";
+import { GroupVisibility, SystemRole } from "../../../generated/prisma/client";
 
 export const metadata = {
   title: "Adminoversikt · Bibelbølgen",
@@ -29,21 +40,67 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminoversiktPage() {
+type AdminSearchParams = {
+  q?: string | string[];
+  sort?: string | string[];
+};
+
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function VisibilityBadge({ visibility }: { visibility: GroupVisibility }) {
+  const isPrivate = visibility === GroupVisibility.PRIVATE;
+
+  return (
+    <Badge
+      className={
+        isPrivate
+          ? "h-auto rounded-md border-stone-500/40 bg-stone-200 px-2.5 py-1 font-bold text-stone-700"
+          : "h-auto rounded-md border-forest-500/30 bg-sage-100 px-2.5 py-1 font-bold text-forest-900"
+      }
+      variant="outline"
+    >
+      <span
+        aria-hidden
+        className="size-1.5 rounded-full bg-current opacity-70"
+      />
+      {isPrivate ? "Privat" : "Offentlig"}
+    </Badge>
+  );
+}
+
+const groupNameCollator = new Intl.Collator("nb-NO");
+
+export default async function AdminoversiktPage({
+  searchParams,
+}: {
+  searchParams: Promise<AdminSearchParams>;
+}) {
   const admin = await requireAdminUserForPage("/admin");
-  const [groups, readingPlan] = await Promise.all([
-    listGroupsForAdmin(admin.id),
-    getActiveReadingPlan(),
-  ]);
+  const params = await searchParams;
+  const isGlobalAdmin = admin.systemRole === SystemRole.GLOBAL_ADMIN;
+  const search = (firstParam(params.q) ?? "").trim();
+  const sort =
+    firstParam(params.sort) === "alphabetical" ? "alphabetical" : "start";
+  const groups = await listGroupsForAdmin(admin.id, {
+    search: isGlobalAdmin ? search : undefined,
+  });
   const groupSummaries = groups.map((group) => {
     const memberStatuses = group.memberships.map((membership) =>
       statusForProgress(
-        latestReportedDay(membership.checkIns),
+        latestComputedMemberDay({
+          checkIns: membership.checkIns,
+          timeZone: group.timeZone,
+          totalDays: group.progress.totalDays,
+        }),
         group.progress.currentDay,
       ),
     );
+    const averageMemberDay = group.memberProgress?.averageDay;
 
     return {
+      averageMemberDay,
       behindCount: memberStatuses.filter((status) => status === "behind")
         .length,
       currentLabel:
@@ -53,23 +110,15 @@ export default async function AdminoversiktPage() {
       group,
       memberCount: group._count.memberships,
       percent: group.progress.percent,
-      status:
-        group.progress.currentDay > 0
-          ? ("on-track" as const)
-          : ("not-started" as const),
     };
   });
-  const summary = {
-    behindCount: groupSummaries.reduce(
-      (sum, group) => sum + group.behindCount,
-      0,
-    ),
-    groupCount: groups.length,
-    memberCount: groupSummaries.reduce(
-      (sum, group) => sum + group.memberCount,
-      0,
-    ),
-  };
+  const sortedGroupSummaries = [...groupSummaries].sort((first, second) => {
+    if (sort === "alphabetical") {
+      return groupNameCollator.compare(first.group.name, second.group.name);
+    }
+
+    return second.group.startsOn.getTime() - first.group.startsOn.getTime();
+  });
 
   return (
     <div className="min-h-screen bg-surface text-ink">
@@ -80,7 +129,7 @@ export default async function AdminoversiktPage() {
           <div>
             <p className="bb-kicker">Administrasjon</p>
             <h1 className="mt-2 font-black font-display text-4xl text-forest-900 leading-tight">
-              Adminoversikt
+              {isGlobalAdmin ? "Global adminoversikt" : "Adminoversikt"}
             </h1>
             <p className="bb-muted mt-2 max-w-xl font-medium">
               Se gruppene du administrerer, følg fremdriften og gå videre til
@@ -95,27 +144,53 @@ export default async function AdminoversiktPage() {
           </Button>
         </div>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Grupper" value={summary.groupCount} />
-          <StatCard label="Deltakere" value={summary.memberCount} />
-          <StatCard
-            hint="trenger oppfølging"
-            label="Deltakere bak planen"
-            value={summary.behindCount}
-          />
-          <StatCard
-            hint={readingPlan?.title}
-            label="Dager i leseplanen"
-            value={readingPlan?.totalDays ?? 0}
-          />
-        </div>
+        <form
+          action="/admin"
+          className="mt-6 flex flex-col gap-3 rounded-lg border border-forest-900/10 bg-paper p-4 sm:flex-row sm:items-end"
+        >
+          {isGlobalAdmin && (
+            <div className="min-w-0 flex-1">
+              <Label htmlFor="admin-group-search">Søk</Label>
+              <Input
+                className="mt-1.5 min-h-11 bg-surface"
+                defaultValue={search}
+                id="admin-group-search"
+                name="q"
+                placeholder="Gruppenavn eller adminnavn"
+                type="search"
+              />
+            </div>
+          )}
+          <div className={isGlobalAdmin ? "sm:w-48" : "sm:w-56"}>
+            <Label htmlFor="admin-group-sort">Sortering</Label>
+            <NativeSelect
+              className="mt-1.5 w-full bg-surface"
+              defaultValue={sort}
+              id="admin-group-sort"
+              name="sort"
+            >
+              <NativeSelectOption value="start">Startdato</NativeSelectOption>
+              <NativeSelectOption value="alphabetical">
+                Alfabetisk
+              </NativeSelectOption>
+            </NativeSelect>
+          </div>
+          <Button className="min-h-11" type="submit">
+            <Search />
+            {isGlobalAdmin ? "Søk" : "Sorter"}
+          </Button>
+        </form>
 
         <Card className="mt-8 border-forest-900/10 bg-paper py-0">
           <CardHeader className="border-forest-900/10 border-b p-6">
             <CardTitle className="font-black font-display text-forest-900 text-lg">
               Grupper
             </CardTitle>
-            <CardDescription>Sortert etter fremdrift</CardDescription>
+            <CardDescription>
+              {sort === "alphabetical"
+                ? "Sortert alfabetisk"
+                : "Sortert etter startdato"}
+            </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
@@ -124,57 +199,73 @@ export default async function AdminoversiktPage() {
                   <TableHead className="px-6">Gruppe</TableHead>
                   <TableHead className="min-w-60">Fremdrift</TableHead>
                   <TableHead>Deltakere</TableHead>
-                  <TableHead className="px-6 text-right">Status</TableHead>
+                  <TableHead className="px-6 text-right">Tilgang</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {[...groupSummaries]
-                  .sort(
-                    (a, b) =>
-                      b.group.progress.currentDay - a.group.progress.currentDay,
-                  )
-                  .map((summary) => {
-                    const group = summary.group;
+                {sortedGroupSummaries.map((summary) => {
+                  const group = summary.group;
 
-                    return (
-                      <TableRow key={group.id}>
-                        <TableCell className="px-6">
-                          <Link
-                            className="bb-focus-ring block rounded-md font-bold text-forest-900 hover:text-forest-700"
-                            href={`/admin/grupper/${group.slug}`}
-                          >
-                            {group.name}
-                          </Link>
-                          <p className="text-ink/50 text-xs">
-                            {summary.currentLabel}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex min-w-56 items-center gap-3">
-                            <div className="flex-1">
-                              <ProgressBar value={summary.percent} />
-                            </div>
-                            <span className="w-10 text-right font-bold text-forest-900 text-sm">
-                              {summary.percent}%
-                            </span>
+                  return (
+                    <TableRow key={group.id}>
+                      <TableCell className="px-6">
+                        <div className="flex items-start gap-2">
+                          <div className="min-w-0 flex-1">
+                            <Link
+                              className="bb-focus-ring block rounded-md font-bold text-forest-900 hover:text-forest-700"
+                              href={`/admin/grupper/${group.slug}`}
+                            >
+                              {group.name}
+                            </Link>
+                            <p className="text-ink/50 text-xs">
+                              {summary.currentLabel}
+                              {typeof summary.averageMemberDay === "number" &&
+                                ` · snitt dag ${summary.averageMemberDay.toLocaleString(
+                                  "nb-NO",
+                                )}`}
+                            </p>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-semibold text-forest-950/70">
-                            {summary.memberCount}
+                          <DeleteGroupButton
+                            groupId={group.id}
+                            groupName={group.name}
+                          />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex min-w-56 items-center gap-3">
+                          <div className="flex-1">
+                            <ProgressBar value={summary.percent} />
+                          </div>
+                          <span className="w-10 text-right font-bold text-forest-900 text-sm">
+                            {summary.percent}%
                           </span>
-                          {summary.behindCount > 0 && (
-                            <span className="ml-2 font-semibold text-stone-700">
-                              ({summary.behindCount} bak)
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="px-6 text-right">
-                          <StatusBadge status={summary.status} />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-semibold text-forest-950/70">
+                          {summary.memberCount}
+                        </span>
+                        {summary.behindCount > 0 && (
+                          <span className="ml-2 font-semibold text-stone-700">
+                            ({summary.behindCount} bak)
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-6 text-right">
+                        <VisibilityBadge visibility={group.visibility} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {sortedGroupSummaries.length === 0 && (
+                  <TableRow>
+                    <TableCell className="px-6 py-8 text-center" colSpan={4}>
+                      <span className="bb-muted font-semibold">
+                        Ingen grupper funnet.
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>

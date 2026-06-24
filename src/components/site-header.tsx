@@ -32,24 +32,29 @@ function BrandWaves() {
 
 function BrandLink({ isAdmin }: { isAdmin: boolean }) {
   return (
-    <Link
-      className="bb-focus-ring inline-flex items-center gap-2 py-1 font-bold text-forest-900 text-lg sm:text-xl"
-      href={isAdmin ? "/admin" : "/"}
-    >
-      <BrandWaves />
-      <span>
+    <div className="inline-flex items-center gap-2">
+      <Link
+        className="bb-focus-ring inline-flex items-center gap-2 py-1 font-bold text-forest-900 text-lg sm:text-xl"
+        href="/"
+      >
+        <BrandWaves />
         Bibelbølgen
-        {isAdmin && (
-          <Badge className="ml-2 bg-sage-100 align-middle font-bold text-[0.6rem] text-forest-900 uppercase">
+      </Link>
+      {isAdmin && (
+        <Badge
+          asChild
+          className="bg-sage-100 align-middle font-bold text-[0.6rem] text-forest-900 uppercase hover:bg-sage-200"
+        >
+          <Link className="bb-focus-ring" href="/admin">
             Admin
-          </Badge>
-        )}
-      </span>
-    </Link>
+          </Link>
+        </Badge>
+      )}
+    </div>
   );
 }
 
-export function SiteHeader({
+export async function SiteHeader({
   active,
   showAdminSessionActions = true,
   variant = "public",
@@ -96,39 +101,32 @@ export function SiteHeader({
               <Link href="/bli-med">Bli med</Link>
             </Button>
           )}
-          {isAdmin && (
+          {isAdmin && showAdminSessionActions && (
             <>
-              <Button
+              <form action={logoutAdminAction}>
+                <Button
+                  className="font-semibold text-forest-950/70 hover:bg-sage-50 hover:text-forest-900"
+                  size="sm"
+                  type="submit"
+                  variant="ghost"
+                >
+                  <LogOut />
+                  Logg ut
+                </Button>
+              </form>
+              <Badge
                 asChild
-                className="font-semibold text-forest-950/70 hover:bg-sage-50 hover:text-forest-900"
-                size="sm"
-                variant="ghost"
+                className="ml-2 h-auto gap-2 rounded-md bg-sage-100 px-3 py-1.5 text-forest-900 hover:bg-sage-200"
               >
-                <Link href="/">Til nettsiden</Link>
-              </Button>
-              {showAdminSessionActions && (
-                <>
-                  <form action={logoutAdminAction}>
-                    <Button
-                      className="font-semibold text-forest-950/70 hover:bg-sage-50 hover:text-forest-900"
-                      size="sm"
-                      type="submit"
-                      variant="ghost"
-                    >
-                      <LogOut />
-                      Logg ut
-                    </Button>
-                  </form>
-                  <Badge className="ml-2 h-auto gap-2 rounded-md bg-sage-100 px-3 py-1.5 text-forest-900">
-                    <Avatar className="size-6">
-                      <AvatarFallback className="bg-sage-300 font-bold text-forest-950 text-xs">
-                        AD
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="font-semibold text-sm">Admin</span>
-                  </Badge>
-                </>
-              )}
+                <Link href="/admin">
+                  <Avatar className="size-6">
+                    <AvatarFallback className="bg-sage-300 font-bold text-forest-950 text-xs">
+                      AD
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="font-semibold text-sm">Admin</span>
+                </Link>
+              </Badge>
             </>
           )}
         </nav>

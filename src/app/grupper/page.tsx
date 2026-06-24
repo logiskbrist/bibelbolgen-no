@@ -73,6 +73,7 @@ export default async function GruppeoversiktPage() {
             {groups.map((group) => {
               const currentDay = group.progress.currentDay;
               const totalDays = group.progress.totalDays;
+              const averageMemberDay = group.memberProgress?.averageDay;
 
               return (
                 <Card
@@ -122,6 +123,14 @@ export default async function GruppeoversiktPage() {
                         <div className="mt-2">
                           <ProgressBar value={group.progress.percent} />
                         </div>
+                        {typeof averageMemberDay === "number" && (
+                          <p className="mt-2 text-ink/50 text-xs">
+                            Snitt innmeldt: dag{" "}
+                            {averageMemberDay.toLocaleString("nb-NO")} ·{" "}
+                            {group.memberProgress?.reportingMemberCount}{" "}
+                            rapportert
+                          </p>
+                        )}
                       </div>
 
                       <div className="mt-5 flex items-center gap-4 text-sm">

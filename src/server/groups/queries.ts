@@ -7,7 +7,10 @@ import {
   requireGroupAdmin,
 } from "~/server/auth/permissions";
 import { getDb } from "~/server/db";
-import { calculateGroupDay } from "~/server/reading-plan/progress";
+import {
+  calculateAverageMemberDay,
+  calculateGroupDay,
+} from "~/server/reading-plan/progress";
 import {
   GroupStatus,
   GroupVisibility,
@@ -25,13 +28,29 @@ function withComputedProgress<
       effectiveOn: Date;
       type: ProgressEventForCalculation["type"];
     }[];
+    memberships?: {
+      checkIns: {
+        checkedInAt: Date;
+        forDate: Date | null;
+        reportedDayNumber: number | null;
+      }[];
+    }[];
     readingPlan: { totalDays: number };
     startsOn: Date;
     timeZone: string;
   },
 >(group: T) {
+  const memberProgress = group.memberships
+    ? calculateAverageMemberDay({
+        memberships: group.memberships,
+        timeZone: group.timeZone,
+        totalDays: group.readingPlan.totalDays,
+      })
+    : null;
+
   return {
     ...group,
+    memberProgress,
     progress: calculateGroupDay({
       progressEvents: group.progressEvents,
       startsOn: group.startsOn,
@@ -74,7 +93,11 @@ export async function listPublicGroups() {
         select: {
           checkIns: {
             orderBy: { checkedInAt: "desc" },
-            select: { reportedDayNumber: true },
+            select: {
+              checkedInAt: true,
+              forDate: true,
+              reportedDayNumber: true,
+            },
             take: 1,
           },
           id: true,
@@ -155,7 +178,11 @@ export async function getGroupBySlugForViewer(
         select: {
           checkIns: {
             orderBy: { checkedInAt: "desc" },
-            select: { reportedDayNumber: true },
+            select: {
+              checkedInAt: true,
+              forDate: true,
+              reportedDayNumber: true,
+            },
             take: 1,
           },
           id: true,
@@ -235,10 +262,29 @@ export async function getAdminGroupBySlug(slug: string, adminUserId: string) {
   return withComputedProgress(group);
 }
 
-export async function listGroupsForAdmin(adminUserId: string) {
+export async function listGroupsForAdmin(
+  adminUserId: string,
+  options: { search?: string } = {},
+) {
   const isGlobal = await isGlobalAdmin(adminUserId);
+  const search = options.search?.trim();
   const where = isGlobal
-    ? {}
+    ? search
+      ? {
+          OR: [
+            { name: { contains: search } },
+            {
+              admins: {
+                some: {
+                  user: {
+                    name: { contains: search },
+                  },
+                },
+              },
+            },
+          ],
+        }
+      : {}
     : {
         admins: {
           some: {
@@ -254,11 +300,22 @@ export async function listGroupsForAdmin(adminUserId: string) {
           memberships: { where: { status: MembershipStatus.ACTIVE } },
         },
       },
+      admins: {
+        include: {
+          user: {
+            select: { name: true },
+          },
+        },
+      },
       memberships: {
         select: {
           checkIns: {
             orderBy: { checkedInAt: "desc" },
-            select: { reportedDayNumber: true },
+            select: {
+              checkedInAt: true,
+              forDate: true,
+              reportedDayNumber: true,
+            },
             take: 1,
           },
           id: true,

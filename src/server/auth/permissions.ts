@@ -71,6 +71,18 @@ export async function isGlobalAdmin(userId: string) {
   return user?.systemRole === SystemRole.GLOBAL_ADMIN;
 }
 
+export async function canAccessAdminPages(userId: string) {
+  if (await isGlobalAdmin(userId)) {
+    return true;
+  }
+
+  const adminAssignmentCount = await getDb().groupAdmin.count({
+    where: { userId },
+  });
+
+  return adminAssignmentCount > 0;
+}
+
 export async function getGroupAdminRole(groupId: string, userId: string) {
   const assignment = await getDb().groupAdmin.findUnique({
     select: { role: true },
